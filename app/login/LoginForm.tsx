@@ -1,0 +1,119 @@
+"use client";
+
+import { useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { createClient } from "@/lib/supabase/client";
+
+export default function LoginForm() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const [mode, setMode] = useState<"signin" | "signup">("signin");
+  const [fullName, setFullName] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setError(null);
+    setLoading(true);
+    const supabase = createClient();
+
+    try {
+      if (mode === "signup") {
+        const { data, error: signUpError } = await supabase.auth.signUp({ email, password });
+        if (signUpError) throw signUpError;
+        if (data.user) {
+          const { error: profileError } = await supabase.from("profiles").insert({
+            id: data.user.id,
+            email,
+            full_name: fullName,
+            role: "hotel_owner",
+          });
+          if (profileError) throw profileError;
+        }
+      } else {
+        const { error: signInError } = await supabase.auth.signInWithPassword({
+          email,
+          password,
+        });
+        if (signInError) throw signInError;
+      }
+
+      const next = searchParams.get("next") || "/owner";
+      router.push(next);
+      router.refresh();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Something went wrong");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <div>
+      <div className="flex gap-2 mb-6 text-sm">
+        <button
+          type="button"
+          onClick={() => setMode("signin")}
+          className={`px-3 py-1.5 rounded-md ${mode === "signin" ? "bg-neutral-900 text-white" : "bg-neutral-100"}`}
+        >
+          Sign in
+        </button>
+        <button
+          type="button"
+          onClick={() => setMode("signup")}
+          className={`px-3 py-1.5 rounded-md ${mode === "signup" ? "bg-neutral-900 text-white" : "bg-neutral-100"}`}
+        >
+          Create account
+        </button>
+      </div>
+
+      <form onSubmit={handleSubmit} className="space-y-4">
+        {mode === "signup" && (
+          <div>
+            <label className="block text-sm font-medium mb-1">Full name</label>
+            <input
+              required
+              value={fullName}
+              onChange={(e) => setFullName(e.target.value)}
+              className="w-full rounded-md border border-neutral-300 px-3 py-2"
+            />
+          </div>
+        )}
+        <div>
+          <label className="block text-sm font-medium mb-1">Email</label>
+          <input
+            required
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            className="w-full rounded-md border border-neutral-300 px-3 py-2"
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium mb-1">Password</label>
+          <input
+            required
+            type="password"
+            minLength={6}
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            className="w-full rounded-md border border-neutral-300 px-3 py-2"
+          />
+        </div>
+
+        {error && <p className="text-sm text-red-600">{error}</p>}
+
+        <button
+          type="submit"
+          disabled={loading}
+          className="w-full rounded-md bg-neutral-900 text-white px-4 py-2 hover:bg-neutral-700 disabled:opacity-50"
+        >
+          {loading ? "Please wait..." : mode === "signup" ? "Create account" : "Sign in"}
+        </button>
+      </form>
+    </div>
+  );
+}
