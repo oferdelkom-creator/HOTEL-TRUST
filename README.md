@@ -57,6 +57,12 @@ A credit-based room exchange network for **verified hotel owners only**. Built w
   a hold, lets you assign the stay to yourself/family/staff).
 - Admin: `/admin` (pending verification queue with approve/reject, active bookings with a "settle
   checkout" action).
+- Email notifications via Resend (`lib/resend.ts`, `RESEND_API_KEY` in `.env.local`): verification
+  decision (approved/rejected) and new booking alerts, sent from `app/api/notify/*` route handlers
+  called client-side after the triggering DB write succeeds (best-effort - a failed email never
+  blocks the actual action). **`hoteltrust.org` needs to be verified as a Resend sending domain**
+  before these will actually deliver - until then Resend will reject sends from
+  `notifications@hoteltrust.org`.
 
 ## Assets
 

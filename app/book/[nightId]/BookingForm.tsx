@@ -59,6 +59,13 @@ export default function BookingForm({
       return;
     }
 
+    // Best-effort notification - a failed email shouldn't block the booking itself.
+    await fetch("/api/notify/new-booking", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ bookingId: booking.id }),
+    }).catch(() => {});
+
     router.push("/owner/bookings");
     router.refresh();
   }
@@ -95,7 +102,7 @@ export default function BookingForm({
       <button
         type="submit"
         disabled={loading}
-        className="rounded-md bg-neutral-900 text-white px-5 py-2.5 hover:bg-neutral-700 disabled:opacity-50"
+        className="rounded-md bg-brand-green text-brand-gold px-5 py-2.5 disabled:opacity-50"
       >
         {loading ? "Booking..." : "Confirm booking"}
       </button>

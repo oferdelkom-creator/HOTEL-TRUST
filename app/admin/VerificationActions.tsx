@@ -12,6 +12,12 @@ export default function VerificationActions({ hotelId }: { hotelId: string }) {
     setLoading(true);
     const supabase = createClient();
     await supabase.from("hotels").update({ verification_status: status }).eq("id", hotelId);
+    // Best-effort notification - a failed email shouldn't block the decision itself.
+    await fetch("/api/notify/verification-decision", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ hotelId }),
+    }).catch(() => {});
     setLoading(false);
     router.refresh();
   }
