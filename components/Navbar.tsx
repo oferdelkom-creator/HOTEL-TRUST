@@ -1,11 +1,12 @@
 import Link from "next/link";
+import Logo from "./Logo";
 
 export default function Navbar() {
   return (
     <header className="border-b border-neutral-200 bg-white">
       <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
-        <Link href="/" className="font-semibold text-lg tracking-tight">
-          Hotel Trust
+        <Link href="/">
+          <Logo />
         </Link>
         <nav className="flex items-center gap-6 text-sm">
           <Link href="/marketplace" className="hover:text-neutral-600">
