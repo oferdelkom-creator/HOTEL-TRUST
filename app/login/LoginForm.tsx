@@ -24,6 +24,19 @@ export default function LoginForm() {
       if (mode === "signup") {
         const { data, error: signUpError } = await supabase.auth.signUp({ email, password });
         if (signUpError) throw signUpError;
+
+        if (data.user && !data.session) {
+          // Email confirmation is required on this Supabase project, so
+          // there's no authenticated session yet - inserting the profile
+          // now would fail RLS (auth.uid() would be null). Nothing more to
+          // do client-side until they click the confirmation link.
+          setError(
+            "Check your email to confirm your account before signing in - we've sent a confirmation link."
+          );
+          setLoading(false);
+          return;
+        }
+
         if (data.user) {
           const { error: profileError } = await supabase.from("profiles").insert({
             id: data.user.id,
@@ -51,7 +64,16 @@ export default function LoginForm() {
       router.push(next);
       router.refresh();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Something went wrong");
+      // Supabase auth/postgrest errors are plain objects, not Error
+      // instances, so `err instanceof Error` alone was silently swallowing
+      // the real reason and always showing a useless generic message.
+      const message =
+        err instanceof Error
+          ? err.message
+          : typeof err === "object" && err !== null && "message" in err
+            ? String((err as { message: unknown }).message)
+            : "Something went wrong";
+      setError(message);
     } finally {
       setLoading(false);
     }
