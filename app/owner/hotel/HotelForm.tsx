@@ -12,7 +12,10 @@ export default function HotelForm({ hotel }: { hotel?: Hotel }) {
   const [city, setCity] = useState(hotel?.city ?? "");
   const [stars, setStars] = useState(hotel?.stars ?? 4);
   const [proofUrl, setProofUrl] = useState(hotel?.verification_proof_url ?? "");
+  const [businessName, setBusinessName] = useState(hotel?.business_name ?? "");
   const [perks, setPerks] = useState(hotel?.perks ?? "");
+  const [accessibility, setAccessibility] = useState(hotel?.accessibility ?? "");
+  const [contactInfo, setContactInfo] = useState(hotel?.contact_info ?? "");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -31,7 +34,17 @@ export default function HotelForm({ hotel }: { hotel?: Hotel }) {
       if (hotel) {
         const { error: updateError } = await supabase
           .from("hotels")
-          .update({ name, country, city, stars, verification_proof_url: proofUrl, perks })
+          .update({
+            name,
+            country,
+            city,
+            stars,
+            verification_proof_url: proofUrl,
+            business_name: businessName,
+            perks,
+            accessibility,
+            contact_info: contactInfo,
+          })
           .eq("id", hotel.id);
         if (updateError) throw updateError;
       } else {
@@ -44,7 +57,10 @@ export default function HotelForm({ hotel }: { hotel?: Hotel }) {
             city,
             stars,
             verification_proof_url: proofUrl,
+            business_name: businessName,
             perks,
+            accessibility,
+            contact_info: contactInfo,
           })
           .select()
           .single();
@@ -60,7 +76,13 @@ export default function HotelForm({ hotel }: { hotel?: Hotel }) {
       router.push("/owner");
       router.refresh();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Something went wrong");
+      const message =
+        err instanceof Error
+          ? err.message
+          : typeof err === "object" && err !== null && "message" in err
+            ? String((err as { message: unknown }).message)
+            : "Something went wrong";
+      setError(message);
     } finally {
       setLoading(false);
     }
@@ -111,6 +133,15 @@ export default function HotelForm({ hotel }: { hotel?: Hotel }) {
         <p className="text-xs text-neutral-500 mt-1">Below 3 stars isn&apos;t accepted onto the platform.</p>
       </div>
       <div>
+        <label className="block text-sm font-medium mb-1">Business / legal entity name</label>
+        <input
+          placeholder="e.g. the company the hotel is registered under, if different from your own name"
+          value={businessName}
+          onChange={(e) => setBusinessName(e.target.value)}
+          className="w-full rounded-md border border-neutral-300 px-3 py-2"
+        />
+      </div>
+      <div>
         <label className="block text-sm font-medium mb-1">Ownership proof link</label>
         <input
           required
@@ -136,6 +167,28 @@ export default function HotelForm({ hotel }: { hotel?: Hotel }) {
         <p className="text-xs text-neutral-500 mt-1">
           Optional - only offer what you can actually deliver. Shown to other members browsing
           your listing.
+        </p>
+      </div>
+      <div>
+        <label className="block text-sm font-medium mb-1">Accessibility</label>
+        <textarea
+          rows={2}
+          placeholder="e.g. Wheelchair accessible rooms, elevator, accessible bathroom"
+          value={accessibility}
+          onChange={(e) => setAccessibility(e.target.value)}
+          className="w-full rounded-md border border-neutral-300 px-3 py-2"
+        />
+      </div>
+      <div>
+        <label className="block text-sm font-medium mb-1">Contact (phone / WhatsApp)</label>
+        <input
+          placeholder="+972..."
+          value={contactInfo}
+          onChange={(e) => setContactInfo(e.target.value)}
+          className="w-full rounded-md border border-neutral-300 px-3 py-2"
+        />
+        <p className="text-xs text-neutral-500 mt-1">
+          Shown to other members so they can reach you directly.
         </p>
       </div>
 

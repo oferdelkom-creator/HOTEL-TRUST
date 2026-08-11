@@ -30,6 +30,9 @@ export interface Hotel {
   // hotel declares its own - there's no universal guarantee across the
   // network since not every property can offer the same extras.
   perks: string | null;
+  business_name: string | null;
+  accessibility: string | null;
+  contact_info: string | null;
   created_at: string;
 }
 

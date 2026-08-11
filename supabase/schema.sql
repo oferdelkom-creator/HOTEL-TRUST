@@ -75,6 +75,16 @@ create table hotels (
   -- like season_tier, since it's just their own marketing copy, not
   -- something that affects credit pricing.
   perks text,
+  -- business/legal entity name, distinct from the personal owner name on
+  -- the profiles row (e.g. an owner might run the hotel under a company).
+  business_name text,
+  -- accessibility features (wheelchair access, elevator, etc) - free text,
+  -- self-declared, same as perks.
+  accessibility text,
+  -- phone/WhatsApp for other members to reach this hotel directly - shown
+  -- on marketplace listings the same as everything else on a verified
+  -- hotel's row, so treat it as semi-public within the network.
+  contact_info text,
   created_at timestamptz not null default now()
 );
 

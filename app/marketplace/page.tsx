@@ -70,6 +70,9 @@ export default async function MarketplacePage() {
                   {offer.hotel.perks && (
                     <p className="text-sm text-brand-green mt-1">{offer.hotel.perks}</p>
                   )}
+                  {offer.hotel.accessibility && (
+                    <p className="text-sm text-neutral-500 mt-1">♿ {offer.hotel.accessibility}</p>
+                  )}
                 </div>
                 <div className="text-right">
                   <p className="font-semibold">{cost.toFixed(2)} credits</p>
