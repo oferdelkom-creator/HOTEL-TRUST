@@ -43,6 +43,9 @@ export default async function MarketplacePage() {
                     {offer.hotel.stars}★ - {offer.start_date} → {offer.end_date} ({offer.nights} nights) -{" "}
                     {SEASON_TIER_LABELS[offer.season_tier]}
                   </p>
+                  {offer.hotel.perks && (
+                    <p className="text-sm text-brand-green mt-1">{offer.hotel.perks}</p>
+                  )}
                 </div>
                 <div className="text-right">
                   <p className="font-semibold">{cost.toFixed(2)} credits</p>

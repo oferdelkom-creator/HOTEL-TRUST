@@ -12,6 +12,7 @@ export default function HotelForm({ hotel }: { hotel?: Hotel }) {
   const [city, setCity] = useState(hotel?.city ?? "");
   const [stars, setStars] = useState(hotel?.stars ?? 4);
   const [proofUrl, setProofUrl] = useState(hotel?.verification_proof_url ?? "");
+  const [perks, setPerks] = useState(hotel?.perks ?? "");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -30,7 +31,7 @@ export default function HotelForm({ hotel }: { hotel?: Hotel }) {
       if (hotel) {
         const { error: updateError } = await supabase
           .from("hotels")
-          .update({ name, country, city, stars, verification_proof_url: proofUrl })
+          .update({ name, country, city, stars, verification_proof_url: proofUrl, perks })
           .eq("id", hotel.id);
         if (updateError) throw updateError;
       } else {
@@ -41,6 +42,7 @@ export default function HotelForm({ hotel }: { hotel?: Hotel }) {
           city,
           stars,
           verification_proof_url: proofUrl,
+          perks,
         });
         if (insertError) throw insertError;
       }
@@ -110,6 +112,20 @@ export default function HotelForm({ hotel }: { hotel?: Hotel }) {
         />
         <p className="text-xs text-neutral-500 mt-1">
           An admin reviews this manually before your hotel is verified.
+        </p>
+      </div>
+      <div>
+        <label className="block text-sm font-medium mb-1">What guests get beyond the room</label>
+        <textarea
+          rows={3}
+          placeholder="e.g. Free upgrade subject to availability, welcome bottle of wine, breakfast included"
+          value={perks}
+          onChange={(e) => setPerks(e.target.value)}
+          className="w-full rounded-md border border-neutral-300 px-3 py-2"
+        />
+        <p className="text-xs text-neutral-500 mt-1">
+          Optional - only offer what you can actually deliver. Shown to other members browsing
+          your listing.
         </p>
       </div>
 

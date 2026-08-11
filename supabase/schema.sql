@@ -45,6 +45,11 @@ create table hotels (
     check (verification_status in ('pending', 'verified', 'rejected')),
   verification_proof_url text,
   verification_note text,
+  -- what this host offers beyond the room (upgrade if available, welcome
+  -- wine, breakfast, etc). Self-declared by the owner - not trust-sensitive
+  -- like season_tier, since it's just their own marketing copy, not
+  -- something that affects credit pricing.
+  perks text,
   created_at timestamptz not null default now()
 );
 

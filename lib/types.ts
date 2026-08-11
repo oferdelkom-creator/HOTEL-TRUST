@@ -25,6 +25,11 @@ export interface Hotel {
   verification_status: VerificationStatus;
   verification_proof_url: string | null;
   verification_note: string | null;
+  // Free text: what this specific host offers guests beyond the room itself
+  // (upgrade subject to availability, welcome wine, breakfast, etc). Each
+  // hotel declares its own - there's no universal guarantee across the
+  // network since not every property can offer the same extras.
+  perks: string | null;
   created_at: string;
 }
 

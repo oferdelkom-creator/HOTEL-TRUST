@@ -52,10 +52,11 @@ export default async function BookNightPage({
       <h1 className="text-2xl font-semibold mb-1">
         {offer.hotel.name} - {offer.hotel.city}, {offer.hotel.country}
       </h1>
-      <p className="text-neutral-500 mb-6">
+      <p className="text-neutral-500 mb-2">
         {offer.hotel.stars}★ - {offer.start_date} → {offer.end_date} ({offer.nights} nights) -{" "}
         {SEASON_TIER_LABELS[offer.season_tier]}
       </p>
+      {offer.hotel.perks && <p className="text-brand-green mb-6">{offer.hotel.perks}</p>}
 
       <div className="rounded-lg border border-neutral-200 bg-white p-6 mb-6">
         <div className="flex justify-between text-sm mb-1">
