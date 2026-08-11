@@ -9,15 +9,15 @@ export default function Navbar() {
           <Logo />
         </Link>
         <nav className="flex items-center gap-6 text-sm">
-          <Link href="/marketplace" className="hover:text-neutral-600">
+          <Link href="/marketplace" className="text-brand-green hover:text-brand-gold">
             Marketplace
           </Link>
-          <Link href="/owner" className="hover:text-neutral-600">
+          <Link href="/owner" className="text-brand-green hover:text-brand-gold">
             Owner Dashboard
           </Link>
           <Link
             href="/login"
-            className="rounded-md bg-neutral-900 text-white px-4 py-2 hover:bg-neutral-700"
+            className="rounded-md bg-brand-green text-brand-gold px-4 py-2 hover:bg-brand-green-dark"
           >
             Sign in
           </Link>

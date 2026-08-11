@@ -58,6 +58,12 @@ A credit-based room exchange network for **verified hotel owners only**. Built w
 - Admin: `/admin` (pending verification queue with approve/reject, active bookings with a "settle
   checkout" action).
 
+## Assets
+
+`public/logo.png` is the provided brand logo, auto-trimmed. `public/hero-thailand.jpg` is a free-to-use
+Unsplash photo (Thailand longtail boat, Unsplash License - free for commercial use, no attribution
+required): https://unsplash.com/photos/photo-1704314315344-cd10b9779ce6
+
 ## Known gaps (deliberate MVP cuts, not forgotten)
 
 - **No real payment gateway.** `hold_status: 'captured'` just marks that a real charge is owed -
