@@ -29,6 +29,31 @@ create policy "profiles_select" on profiles for select
 create policy "profiles_insert_own" on profiles for insert
   with check (auth.uid() = id);
 
+-- Auto-creates the profiles row the moment an auth user is created, not
+-- only when the client happens to have an active session right after
+-- signup. Matters because if email confirmation is required, signUp()
+-- returns no session, so a client-side insert (which needs auth.uid() to
+-- pass RLS) would silently fail - this trigger fires unconditionally as
+-- part of the signup itself, security definer so it bypasses RLS entirely.
+create function handle_new_user() returns trigger
+language plpgsql security definer as $$
+begin
+  insert into public.profiles (id, email, full_name, role)
+  values (
+    new.id,
+    new.email,
+    coalesce(new.raw_user_meta_data ->> 'full_name', ''),
+    'hotel_owner'
+  )
+  on conflict (id) do nothing;
+  return new;
+end;
+$$;
+
+create trigger on_auth_user_created
+  after insert on auth.users
+  for each row execute function handle_new_user();
+
 -- ============================================================
 -- hotels
 -- ============================================================

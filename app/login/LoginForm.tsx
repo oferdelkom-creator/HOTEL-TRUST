@@ -22,35 +22,34 @@ export default function LoginForm() {
 
     try {
       if (mode === "signup") {
-        const { data, error: signUpError } = await supabase.auth.signUp({ email, password });
+        // full_name goes in user metadata, not a separate insert - a DB
+        // trigger creates the profiles row from this the moment the auth
+        // user is created, regardless of whether email confirmation delays
+        // the session (a client-side insert would need auth.uid(), which
+        // isn't set yet in that case).
+        const { data, error: signUpError } = await supabase.auth.signUp({
+          email,
+          password,
+          options: { data: { full_name: fullName } },
+        });
         if (signUpError) throw signUpError;
 
-        if (data.user && !data.session) {
-          // Email confirmation is required on this Supabase project, so
-          // there's no authenticated session yet - inserting the profile
-          // now would fail RLS (auth.uid() would be null). Nothing more to
-          // do client-side until they click the confirmation link.
-          setError(
-            "Check your email to confirm your account before signing in - we've sent a confirmation link."
-          );
-          setLoading(false);
-          return;
-        }
-
         if (data.user) {
-          const { error: profileError } = await supabase.from("profiles").insert({
-            id: data.user.id,
-            email,
-            full_name: fullName,
-            role: "hotel_owner",
-          });
-          if (profileError) throw profileError;
-
           await fetch("/api/notify/welcome", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ profileId: data.user.id }),
           }).catch(() => {});
+        }
+
+        if (!data.session) {
+          // Email confirmation is required on this project - nothing more
+          // to do client-side until they click the confirmation link.
+          setError(
+            "Check your email to confirm your account before signing in - we've sent a confirmation link."
+          );
+          setLoading(false);
+          return;
         }
       } else {
         const { error: signInError } = await supabase.auth.signInWithPassword({
