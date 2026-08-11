@@ -7,20 +7,32 @@ import { createClient } from "@/lib/supabase/client";
 export default function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [mode, setMode] = useState<"signin" | "signup">("signin");
+  const [mode, setMode] = useState<"signin" | "signup" | "forgot">("signin");
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [info, setInfo] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
+    setInfo(null);
     setLoading(true);
     const supabase = createClient();
 
     try {
+      if (mode === "forgot") {
+        const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
+          redirectTo: "https://hoteltrust.org/reset-password",
+        });
+        if (resetError) throw resetError;
+        setInfo("If that email has an account, a reset link has been sent - check your inbox.");
+        setLoading(false);
+        return;
+      }
+
       if (mode === "signup") {
         // full_name goes in user metadata, not a separate insert - a DB
         // trigger creates the profiles row from this the moment the auth
@@ -76,6 +88,43 @@ export default function LoginForm() {
     } finally {
       setLoading(false);
     }
+  }
+
+  if (mode === "forgot") {
+    return (
+      <div>
+        <button
+          type="button"
+          onClick={() => setMode("signin")}
+          className="text-sm text-brand-green underline mb-6"
+        >
+          &larr; Back to sign in
+        </button>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium mb-1">Email</label>
+            <input
+              required
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="w-full rounded-md border border-neutral-300 px-3 py-2"
+            />
+          </div>
+
+          {error && <p className="text-sm text-red-600">{error}</p>}
+          {info && <p className="text-sm text-brand-green">{info}</p>}
+
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full rounded-md bg-brand-green text-brand-gold px-4 py-2 disabled:opacity-50"
+          >
+            {loading ? "Sending..." : "Send reset link"}
+          </button>
+        </form>
+      </div>
+    );
   }
 
   return (
@@ -140,6 +189,16 @@ export default function LoginForm() {
         >
           {loading ? "Please wait..." : mode === "signup" ? "Create account" : "Sign in"}
         </button>
+
+        {mode === "signin" && (
+          <button
+            type="button"
+            onClick={() => setMode("forgot")}
+            className="text-sm text-neutral-500 underline block mx-auto"
+          >
+            Forgot password?
+          </button>
+        )}
       </form>
     </div>
   );
