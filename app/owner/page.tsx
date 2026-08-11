@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import type { Hotel } from "@/lib/types";
+import InviteButton from "@/components/InviteButton";
 
 const STATUS_LABEL: Record<Hotel["verification_status"], string> = {
   pending: "Pending review",
@@ -37,7 +38,7 @@ export default async function OwnerDashboardPage() {
         </p>
         <Link
           href="/owner/hotel/new"
-          className="inline-block rounded-md bg-neutral-900 text-white px-5 py-2.5"
+          className="inline-block rounded-md bg-brand-green text-brand-gold px-5 py-2.5"
         >
           Add hotel
         </Link>
@@ -79,20 +80,24 @@ export default async function OwnerDashboardPage() {
         <p className="text-3xl font-semibold">{(balanceRow?.balance ?? 0).toFixed(2)}</p>
       </div>
 
+      <div className="mb-8">
+        <InviteButton />
+      </div>
+
       <div className="grid grid-cols-2 gap-4">
-        <Link href="/owner/nights" className="rounded-lg border border-neutral-200 bg-white p-6 hover:border-neutral-400">
+        <Link href="/owner/nights" className="rounded-lg border border-neutral-200 bg-white p-6 hover:border-brand-green">
           <h2 className="font-medium mb-1">Your available nights</h2>
           <p className="text-sm text-neutral-500">Offer vacant nights to earn credits</p>
         </Link>
-        <Link href="/owner/bookings" className="rounded-lg border border-neutral-200 bg-white p-6 hover:border-neutral-400">
+        <Link href="/owner/bookings" className="rounded-lg border border-neutral-200 bg-white p-6 hover:border-brand-green">
           <h2 className="font-medium mb-1">Bookings & ledger</h2>
           <p className="text-sm text-neutral-500">Track exchanges and credit history</p>
         </Link>
-        <Link href="/marketplace" className="rounded-lg border border-neutral-200 bg-white p-6 hover:border-neutral-400">
+        <Link href="/marketplace" className="rounded-lg border border-neutral-200 bg-white p-6 hover:border-brand-green">
           <h2 className="font-medium mb-1">Marketplace</h2>
           <p className="text-sm text-neutral-500">Browse nights at other verified hotels</p>
         </Link>
-        <Link href="/owner/hotel/edit" className="rounded-lg border border-neutral-200 bg-white p-6 hover:border-neutral-400">
+        <Link href="/owner/hotel/edit" className="rounded-lg border border-neutral-200 bg-white p-6 hover:border-brand-green">
           <h2 className="font-medium mb-1">Hotel profile</h2>
           <p className="text-sm text-neutral-500">Edit your hotel details</p>
         </Link>
