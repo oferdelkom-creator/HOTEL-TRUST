@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import LoginForm from "./LoginForm";
 
 export default function LoginPage() {
@@ -8,7 +9,9 @@ export default function LoginPage() {
         New here? The same form creates your account - you&apos;ll add your hotel and submit
         verification next.
       </p>
-      <LoginForm />
+      <Suspense fallback={null}>
+        <LoginForm />
+      </Suspense>
     </div>
   );
 }
