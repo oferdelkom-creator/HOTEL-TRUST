@@ -14,6 +14,11 @@ export default function SettleBookingButton({ bookingId }: { bookingId: string }
     // Credits the host hotel and decides hold_status (released vs captured)
     // based on the requesting hotel's balance at checkout time.
     await supabase.rpc("settle_booking", { p_booking_id: bookingId, p_credit_host: true });
+    await fetch("/api/notify/booking-settled", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ bookingId }),
+    }).catch(() => {});
     setLoading(false);
     router.refresh();
   }
@@ -22,7 +27,7 @@ export default function SettleBookingButton({ bookingId }: { bookingId: string }
     <button
       onClick={handleSettle}
       disabled={loading}
-      className="text-sm rounded-md bg-neutral-900 text-white px-4 py-1.5 hover:bg-neutral-700 disabled:opacity-50"
+      className="text-sm rounded-md bg-brand-green text-brand-gold px-4 py-1.5 disabled:opacity-50"
     >
       {loading ? "Settling..." : "Settle checkout"}
     </button>

@@ -22,21 +22,27 @@ export async function POST(request: Request) {
     .select("*")
     .eq("id", booking.host_hotel_id)
     .maybeSingle<Hotel>();
-  if (!hostHotel) return NextResponse.json({ error: "host hotel not found" }, { status: 404 });
+  const { data: requestingHotel } = await supabase
+    .from("hotels")
+    .select("*")
+    .eq("id", booking.requesting_hotel_id)
+    .maybeSingle<Hotel>();
+  if (!hostHotel || !requestingHotel)
+    return NextResponse.json({ error: "hotel not found" }, { status: 404 });
 
   const { data: owner } = await supabase
     .from("profiles")
     .select("*")
-    .eq("id", hostHotel.owner_id)
+    .eq("id", requestingHotel.owner_id)
     .maybeSingle<Profile>();
   if (!owner) return NextResponse.json({ error: "owner not found" }, { status: 404 });
 
   await resend.emails.send({
     from: EMAIL_FROM,
     to: owner.email,
-    subject: `New booking at ${hostHotel.name}`,
+    subject: `Confirmed: your stay at ${hostHotel.name}`,
     html: renderEmail(
-      `<p>Hi ${owner.full_name},</p><p>A member booked <strong>${booking.nights} night(s)</strong> at ${hostHotel.name} for ${booking.credits_cost} credits (guest: ${booking.guest_name}, ${booking.guest_type}). Confirm it from your <a href="https://hoteltrust.org/owner/bookings">bookings dashboard</a>.</p>`
+      `<p>Hi ${owner.full_name},</p><p><strong>${hostHotel.name}</strong> confirmed your ${booking.nights} night(s) stay (guest: ${booking.guest_name}). See details in your <a href="https://hoteltrust.org/owner/bookings">bookings dashboard</a>.</p>`
     ),
   });
 

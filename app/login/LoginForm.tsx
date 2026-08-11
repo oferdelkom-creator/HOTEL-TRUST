@@ -32,6 +32,12 @@ export default function LoginForm() {
             role: "hotel_owner",
           });
           if (profileError) throw profileError;
+
+          await fetch("/api/notify/welcome", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ profileId: data.user.id }),
+          }).catch(() => {});
         }
       } else {
         const { error: signInError } = await supabase.auth.signInWithPassword({
@@ -57,14 +63,14 @@ export default function LoginForm() {
         <button
           type="button"
           onClick={() => setMode("signin")}
-          className={`px-3 py-1.5 rounded-md ${mode === "signin" ? "bg-neutral-900 text-white" : "bg-neutral-100"}`}
+          className={`px-3 py-1.5 rounded-md ${mode === "signin" ? "bg-brand-green text-brand-gold" : "bg-neutral-100"}`}
         >
           Sign in
         </button>
         <button
           type="button"
           onClick={() => setMode("signup")}
-          className={`px-3 py-1.5 rounded-md ${mode === "signup" ? "bg-neutral-900 text-white" : "bg-neutral-100"}`}
+          className={`px-3 py-1.5 rounded-md ${mode === "signup" ? "bg-brand-green text-brand-gold" : "bg-neutral-100"}`}
         >
           Create account
         </button>
@@ -109,7 +115,7 @@ export default function LoginForm() {
         <button
           type="submit"
           disabled={loading}
-          className="w-full rounded-md bg-neutral-900 text-white px-4 py-2 hover:bg-neutral-700 disabled:opacity-50"
+          className="w-full rounded-md bg-brand-green text-brand-gold px-4 py-2 disabled:opacity-50"
         >
           {loading ? "Please wait..." : mode === "signup" ? "Create account" : "Sign in"}
         </button>

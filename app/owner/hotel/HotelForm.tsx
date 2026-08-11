@@ -35,16 +35,26 @@ export default function HotelForm({ hotel }: { hotel?: Hotel }) {
           .eq("id", hotel.id);
         if (updateError) throw updateError;
       } else {
-        const { error: insertError } = await supabase.from("hotels").insert({
-          owner_id: user.id,
-          name,
-          country,
-          city,
-          stars,
-          verification_proof_url: proofUrl,
-          perks,
-        });
+        const { data: newHotel, error: insertError } = await supabase
+          .from("hotels")
+          .insert({
+            owner_id: user.id,
+            name,
+            country,
+            city,
+            stars,
+            verification_proof_url: proofUrl,
+            perks,
+          })
+          .select()
+          .single();
         if (insertError) throw insertError;
+
+        await fetch("/api/notify/new-hotel-review", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ hotelId: newHotel.id }),
+        }).catch(() => {});
       }
 
       router.push("/owner");
@@ -134,7 +144,7 @@ export default function HotelForm({ hotel }: { hotel?: Hotel }) {
       <button
         type="submit"
         disabled={loading}
-        className="rounded-md bg-neutral-900 text-white px-5 py-2.5 hover:bg-neutral-700 disabled:opacity-50"
+        className="rounded-md bg-brand-green text-brand-gold px-5 py-2.5 disabled:opacity-50"
       >
         {loading ? "Saving..." : hotel ? "Save changes" : "Add hotel"}
       </button>

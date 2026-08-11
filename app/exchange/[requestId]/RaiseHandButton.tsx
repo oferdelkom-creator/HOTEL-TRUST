@@ -29,6 +29,12 @@ export default function RaiseHandButton({
       return;
     }
 
+    await fetch("/api/notify/swap-interest", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ requestId, interestedHotelId: hotelId }),
+    }).catch(() => {});
+
     router.refresh();
     setLoading(false);
   }

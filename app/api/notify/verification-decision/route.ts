@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { resend, EMAIL_FROM } from "@/lib/resend";
+import { renderEmail } from "@/lib/emailTemplate";
 import type { Hotel, Profile } from "@/lib/types";
 
 export async function POST(request: Request) {
@@ -34,9 +35,11 @@ export async function POST(request: Request) {
     from: EMAIL_FROM,
     to: owner.email,
     subject: verified ? "You're verified on Hotel Trust" : "Update on your Hotel Trust application",
-    html: verified
-      ? `<p>Hi ${owner.full_name},</p><p><strong>${hotel.name}</strong> is now verified on Hotel Trust. You can offer nights and browse the exchange at <a href="https://hoteltrust.org/owner">hoteltrust.org/owner</a>.</p>`
-      : `<p>Hi ${owner.full_name},</p><p>We weren't able to verify <strong>${hotel.name}</strong> at this time${hotel.verification_note ? `: ${hotel.verification_note}` : "."}</p>`,
+    html: renderEmail(
+      verified
+        ? `<p>Hi ${owner.full_name},</p><p><strong>${hotel.name}</strong> is now verified on Hotel Trust. You can offer nights and browse the exchange at <a href="https://hoteltrust.org/owner">hoteltrust.org/owner</a>.</p>`
+        : `<p>Hi ${owner.full_name},</p><p>We weren't able to verify <strong>${hotel.name}</strong> at this time${hotel.verification_note ? `: ${hotel.verification_note}` : "."}</p>`
+    ),
   });
 
   return NextResponse.json({ ok: true });

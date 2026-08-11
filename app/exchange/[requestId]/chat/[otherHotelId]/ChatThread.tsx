@@ -65,6 +65,18 @@ export default function ChatThread({
       return;
     }
 
+    const sentBody = body.trim();
+    await fetch("/api/notify/new-message", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        requestId,
+        senderHotelId: myHotelId,
+        recipientHotelId: otherHotelId,
+        body: sentBody,
+      }),
+    }).catch(() => {});
+
     const { data } = await supabase
       .from("swap_messages")
       .select("*")
