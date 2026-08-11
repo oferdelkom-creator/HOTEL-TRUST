@@ -68,3 +68,30 @@ export interface CreditLedgerEntry {
   reason: "booking_spent" | "stay_redeemed" | "admin_adjustment";
   created_at: string;
 }
+
+export type SwapRequestStatus = "open" | "closed";
+
+export interface SwapRequest {
+  id: string;
+  hotel_id: string;
+  wanted_location: string;
+  notes: string | null;
+  status: SwapRequestStatus;
+  created_at: string;
+}
+
+export interface SwapInterest {
+  id: string;
+  request_id: string;
+  interested_hotel_id: string;
+  created_at: string;
+}
+
+export interface SwapMessage {
+  id: string;
+  request_id: string;
+  sender_hotel_id: string;
+  recipient_hotel_id: string;
+  body: string;
+  created_at: string;
+}

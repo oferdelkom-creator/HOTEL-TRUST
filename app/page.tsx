@@ -1,7 +1,13 @@
 import Link from "next/link";
 import Image from "next/image";
+import { createClient } from "@/lib/supabase/server";
+import { getVerifiedHotelCount } from "@/lib/platformStats";
+import LaunchProgress from "@/components/LaunchProgress";
 
-export default function HomePage() {
+export default async function HomePage() {
+  const supabase = await createClient();
+  const verifiedCount = await getVerifiedHotelCount(supabase);
+
   return (
     <div>
       <section className="relative overflow-hidden">
@@ -31,6 +37,10 @@ export default function HomePage() {
             </Link>
           </div>
         </div>
+      </section>
+
+      <section className="max-w-lg mx-auto px-4 -mt-8 relative">
+        <LaunchProgress verifiedCount={verifiedCount} />
       </section>
 
       <section className="max-w-4xl mx-auto px-4 py-20 grid grid-cols-1 md:grid-cols-3 gap-8">

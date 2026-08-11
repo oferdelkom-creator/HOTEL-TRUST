@@ -12,6 +12,9 @@ export default function Navbar() {
           <Link href="/marketplace" className="text-brand-green hover:text-brand-gold">
             Marketplace
           </Link>
+          <Link href="/exchange" className="text-brand-green hover:text-brand-gold">
+            Direct Exchange
+          </Link>
           <Link href="/owner" className="text-brand-green hover:text-brand-gold">
             Owner Dashboard
           </Link>

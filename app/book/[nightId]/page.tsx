@@ -1,7 +1,10 @@
 import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import type { Hotel, NightOffer } from "@/lib/types";
+import type { Hotel, NightOffer, Profile } from "@/lib/types";
 import { estimateCreditsCost, SEASON_TIER_LABELS } from "@/lib/credits";
+import { getVerifiedHotelCount } from "@/lib/platformStats";
+import { LAUNCH_THRESHOLD } from "@/lib/platformConfig";
+import LockedUntilLaunch from "@/components/LockedUntilLaunch";
 import BookingForm from "./BookingForm";
 
 type OfferWithHotel = NightOffer & { hotel: Hotel };
@@ -26,6 +29,21 @@ export default async function BookNightPage({
   if (!myHotel) redirect("/owner/hotel/new");
   if (myHotel.verification_status !== "verified") {
     redirect("/owner");
+  }
+
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("role")
+    .eq("id", user.id)
+    .maybeSingle<Pick<Profile, "role">>();
+  const verifiedCount = await getVerifiedHotelCount(supabase);
+
+  if (verifiedCount < LAUNCH_THRESHOLD && profile?.role !== "admin") {
+    return (
+      <div className="max-w-xl mx-auto px-4 py-12">
+        <LockedUntilLaunch verifiedCount={verifiedCount} what="Booking" />
+      </div>
+    );
   }
 
   const { data: offer } = await supabase

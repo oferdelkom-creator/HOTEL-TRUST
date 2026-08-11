@@ -311,3 +311,112 @@ begin
   where id = p_booking_id;
 end;
 $$;
+
+-- ============================================================
+-- Direct barter matching: separate from the credit exchange above.
+-- A hotel posts what they're looking for, other hotels raise their
+-- hand, and the two sides negotiate directly in a private thread -
+-- Hotel Trust doesn't price or arbitrate these, just makes the intro.
+-- ============================================================
+create table swap_requests (
+  id uuid primary key default gen_random_uuid(),
+  hotel_id uuid not null references hotels (id) on delete cascade,
+  wanted_location text not null,
+  notes text,
+  status text not null default 'open' check (status in ('open', 'closed')),
+  created_at timestamptz not null default now()
+);
+
+alter table swap_requests enable row level security;
+
+create policy "swap_requests_select" on swap_requests for select
+  using (
+    (status = 'open' and exists (
+      select 1 from hotels h
+      where h.id = swap_requests.hotel_id and h.verification_status = 'verified'
+    ))
+    or hotel_id in (select id from hotels where owner_id = auth.uid())
+    or is_admin()
+  );
+
+create policy "swap_requests_insert_own" on swap_requests for insert
+  with check (
+    hotel_id in (
+      select id from hotels where owner_id = auth.uid() and verification_status = 'verified'
+    )
+  );
+
+create policy "swap_requests_update_own" on swap_requests for update
+  using (hotel_id in (select id from hotels where owner_id = auth.uid()) or is_admin());
+
+-- "Raising a hand" on someone else's request.
+create table swap_interests (
+  id uuid primary key default gen_random_uuid(),
+  request_id uuid not null references swap_requests (id) on delete cascade,
+  interested_hotel_id uuid not null references hotels (id),
+  created_at timestamptz not null default now(),
+  unique (request_id, interested_hotel_id)
+);
+
+alter table swap_interests enable row level security;
+
+-- visible to whoever posted the request and whoever raised their hand
+create policy "swap_interests_select" on swap_interests for select
+  using (
+    interested_hotel_id in (select id from hotels where owner_id = auth.uid())
+    or request_id in (select id from swap_requests where hotel_id in (
+      select id from hotels where owner_id = auth.uid()
+    ))
+    or is_admin()
+  );
+
+create policy "swap_interests_insert_own" on swap_interests for insert
+  with check (
+    interested_hotel_id in (
+      select id from hotels where owner_id = auth.uid() and verification_status = 'verified'
+    )
+    and request_id in (select id from swap_requests where status = 'open')
+  );
+
+-- Private 1:1 thread, scoped to a specific request + the two hotels
+-- involved. A hotel can only message on a request if it's either the
+-- request owner or someone who actually raised their hand on it -
+-- prevents random hotels DMing each other outside a matched context.
+create table swap_messages (
+  id uuid primary key default gen_random_uuid(),
+  request_id uuid not null references swap_requests (id) on delete cascade,
+  sender_hotel_id uuid not null references hotels (id),
+  recipient_hotel_id uuid not null references hotels (id),
+  check (sender_hotel_id <> recipient_hotel_id),
+  body text not null,
+  created_at timestamptz not null default now()
+);
+
+alter table swap_messages enable row level security;
+
+create policy "swap_messages_select" on swap_messages for select
+  using (
+    sender_hotel_id in (select id from hotels where owner_id = auth.uid())
+    or recipient_hotel_id in (select id from hotels where owner_id = auth.uid())
+    or is_admin()
+  );
+
+create policy "swap_messages_insert" on swap_messages for insert
+  with check (
+    sender_hotel_id in (select id from hotels where owner_id = auth.uid())
+    and exists (
+      select 1 from swap_requests r
+      where r.id = swap_messages.request_id
+        and (
+          (r.hotel_id = swap_messages.sender_hotel_id and exists (
+            select 1 from swap_interests si
+            where si.request_id = r.id and si.interested_hotel_id = swap_messages.recipient_hotel_id
+          ))
+          or
+          (r.hotel_id = swap_messages.recipient_hotel_id and exists (
+            select 1 from swap_interests si
+            where si.request_id = r.id and si.interested_hotel_id = swap_messages.sender_hotel_id
+          ))
+        )
+    )
+  );
