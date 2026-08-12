@@ -47,14 +47,18 @@ export default async function AdminPage() {
                 <p className="font-medium">
                   {hotel.name} - {hotel.city}, {hotel.country} - {hotel.stars}★
                 </p>
-                <a
-                  href={hotel.verification_proof_url ?? "#"}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="text-sm underline text-neutral-600"
-                >
-                  View ownership proof
-                </a>
+                {hotel.verification_proof_url ? (
+                  <a
+                    href={hotel.verification_proof_url}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-sm underline text-neutral-600"
+                  >
+                    View ownership proof
+                  </a>
+                ) : (
+                  <p className="text-sm text-amber-700">No ownership proof submitted yet</p>
+                )}
                 <VerificationActions hotelId={hotel.id} />
               </div>
             ))

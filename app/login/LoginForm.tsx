@@ -42,7 +42,14 @@ export default function LoginForm() {
         const { data, error: signUpError } = await supabase.auth.signUp({
           email,
           password,
-          options: { data: { full_name: fullName } },
+          options: {
+            data: { full_name: fullName },
+            // Lands the confirmation link on /auth/callback, which sends
+            // the owner straight to the hotel form if they don't have one
+            // yet - without this they're just left on /login with no
+            // forced path back into the signup flow.
+            emailRedirectTo: `${window.location.origin}/auth/callback`,
+          },
         });
         if (signUpError) throw signUpError;
 

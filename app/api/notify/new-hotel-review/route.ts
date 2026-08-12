@@ -17,12 +17,16 @@ export async function POST(request: Request) {
     .maybeSingle<Hotel>();
   if (!hotel) return NextResponse.json({ error: "hotel not found" }, { status: 404 });
 
+  const proofLine = hotel.verification_proof_url
+    ? `<p><a href="${hotel.verification_proof_url}">Ownership proof</a></p>`
+    : `<p>No ownership proof submitted yet.</p>`;
+
   await resend.emails.send({
     from: EMAIL_FROM,
     to: ADMIN_EMAIL,
     subject: `New hotel pending review: ${hotel.name}`,
     html: renderEmail(
-      `<p><strong>${hotel.name}</strong> (${hotel.city}, ${hotel.country}, ${hotel.stars}★) submitted for verification.</p><p><a href="${hotel.verification_proof_url}">Ownership proof</a></p><p>Review it in <a href="https://hoteltrust.org/admin">the admin panel</a>.</p>`
+      `<p><strong>${hotel.name}</strong> (${hotel.city}, ${hotel.country}, ${hotel.stars}★) submitted for verification.</p>${proofLine}<p>Review it in <a href="https://hoteltrust.org/admin">the admin panel</a>.</p>`
     ),
   });
 
