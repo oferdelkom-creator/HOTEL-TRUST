@@ -22,6 +22,12 @@ Supabase, payments via YooKassa (ЮKassa).
   payload, then flips the booking to `confirmed`/`cancelled`).
 - Auth: `/login` (combined signup/signin/forgot), session via `@supabase/ssr`, route protection in
   `proxy.ts` for `/account/*`, `/host/*`, `/book/*`.
+- **Mutual reviews**: after a stay is over (booking `confirmed` and `check_out` has passed), the
+  guest can rate the listing/host and the host can rate the guest — one review per side per
+  booking, enforced server-side by `validate_review()` in `supabase/schema.sql` (verified directly
+  against the live database: rejects reviewing before the stay ends, rejects the wrong author,
+  rejects a duplicate). Guest reviews are public on the listing page (`listing_ratings` view for
+  the average); host reviews of a guest are private to that guest.
 
 ## Getting started
 
@@ -47,7 +53,7 @@ Supabase, payments via YooKassa (ЮKassa).
   it won't fire against `localhost`. Deploy (e.g. Vercel) and set `NEXT_PUBLIC_SITE_URL` /
   register the webhook URL with YooKassa before testing a real payment end-to-end.
 - **No booking cancellation flow** and no dispute resolution beyond direct database access.
-- **No messaging** between guest and host, and no reviews.
+- **No messaging** between guest and host.
 - **No map integration** on the listing page — city/address are shown as plain text.
 - **No availability calendar UI** — hosts block dates one at a time; guests pick dates via plain
   date inputs.

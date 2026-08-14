@@ -284,6 +284,91 @@ create policy "payments_insert_own" on payments for insert
 -- YooKassa API rather than trusting anything client-submitted.
 
 -- ============================================================
+-- reviews: mutual, guest <-> host, one per side per booking, only after
+-- the stay is actually over (booking confirmed and check_out has passed).
+-- ============================================================
+create table reviews (
+  id uuid primary key default gen_random_uuid(),
+  booking_id uuid not null references bookings (id) on delete cascade,
+  listing_id uuid not null references listings (id),
+  author_id uuid not null references profiles (id),
+  author_name text not null default '',
+  reviewee_id uuid not null references profiles (id),
+  author_role text not null check (author_role in ('guest', 'host')),
+  rating smallint not null check (rating between 1 and 5),
+  comment text not null default '',
+  created_at timestamptz not null default now(),
+  unique (booking_id, author_role)
+);
+
+create index reviews_listing_idx on reviews (listing_id);
+
+-- Validates eligibility and who's allowed to author which side, and fills
+-- in listing_id/reviewee_id server-side so the client never has to (and
+-- can't tamper with) who's actually being reviewed.
+create function validate_review() returns trigger
+language plpgsql as $$
+declare
+  v_booking bookings%rowtype;
+  v_listing listings%rowtype;
+begin
+  select * into v_booking from bookings where id = new.booking_id;
+  if v_booking.id is null then
+    raise exception 'booking not found';
+  end if;
+  if v_booking.status <> 'confirmed' or v_booking.check_out > current_date then
+    raise exception 'this stay is not finished yet, so it cannot be reviewed';
+  end if;
+
+  select * into v_listing from listings where id = v_booking.listing_id;
+
+  if new.author_role = 'guest' then
+    if new.author_id <> v_booking.guest_id then
+      raise exception 'only the guest of this booking can leave a guest review';
+    end if;
+    new.reviewee_id := v_listing.host_id;
+  else
+    if new.author_id <> v_listing.host_id then
+      raise exception 'only the host of this listing can leave a host review';
+    end if;
+    new.reviewee_id := v_booking.guest_id;
+  end if;
+
+  new.listing_id := v_listing.id;
+  return new;
+end;
+$$;
+
+create trigger trg_validate_review
+  before insert on reviews
+  for each row execute function validate_review();
+
+alter table reviews enable row level security;
+
+-- Guest-authored reviews (rating the listing/host) are public on published
+-- listings, like any marketplace review. Host-authored reviews (rating the
+-- guest) are private - visible only to that guest and the host who wrote
+-- it, since there's no guest-profile browsing feature for other hosts to
+-- read them anyway.
+create policy "reviews_select" on reviews for select
+  using (
+    (author_role = 'guest' and exists (
+      select 1 from listings l where l.id = reviews.listing_id and l.status = 'published'
+    ))
+    or author_id = auth.uid()
+    or reviewee_id = auth.uid()
+  );
+
+create policy "reviews_insert_own" on reviews for insert
+  with check (author_id = auth.uid());
+
+create view listing_ratings with (security_invoker = true) as
+select listing_id, avg(rating)::numeric(3, 2) as avg_rating, count(*) as review_count
+from reviews
+where author_role = 'guest'
+group by listing_id;
+
+-- ============================================================
 -- Storage: listing photos, uploaded by the host to their own uid-prefixed
 -- folder, publicly readable (needed for search/listing pages).
 -- ============================================================

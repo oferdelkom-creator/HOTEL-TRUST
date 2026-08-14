@@ -53,6 +53,18 @@ export default async function SearchPage({
   if (params.guests) detailParams.set("guests", params.guests);
   const detailQuery = detailParams.toString();
 
+  let ratingsByListing = new Map<string, { avg_rating: number; review_count: number }>();
+  if (availableListings.length > 0) {
+    const { data: ratings } = await supabase
+      .from("listing_ratings")
+      .select("listing_id, avg_rating, review_count")
+      .in(
+        "listing_id",
+        availableListings.map((l) => l.id)
+      );
+    ratingsByListing = new Map((ratings ?? []).map((r) => [r.listing_id, r]));
+  }
+
   return (
     <div className="max-w-6xl mx-auto px-4 py-12">
       <h1 className="text-2xl font-semibold mb-6">
@@ -70,6 +82,7 @@ export default async function SearchPage({
               (a, b) => a.sort_order - b.sort_order
             );
             const cover = photos[0]?.url;
+            const rating = ratingsByListing.get(listing.id);
             return (
               <Link
                 key={listing.id}
@@ -87,7 +100,14 @@ export default async function SearchPage({
                   )}
                 </div>
                 <div className="p-4">
-                  <p className="text-sm text-neutral-500">{listing.city}</p>
+                  <div className="flex justify-between items-baseline">
+                    <p className="text-sm text-neutral-500">{listing.city}</p>
+                    {rating && (
+                      <p className="text-sm text-neutral-700">
+                        ★ {rating.avg_rating} ({rating.review_count})
+                      </p>
+                    )}
+                  </div>
                   <h2 className="font-medium mb-1">{listing.title}</h2>
                   <p className="font-semibold">{formatRub(listing.price_per_night)} / ночь</p>
                 </div>

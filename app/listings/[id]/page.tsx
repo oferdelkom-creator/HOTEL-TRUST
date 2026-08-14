@@ -30,6 +30,19 @@ export default async function ListingPage({
     notFound();
   }
 
+  const { data: rating } = await supabase
+    .from("listing_ratings")
+    .select("avg_rating, review_count")
+    .eq("listing_id", id)
+    .maybeSingle();
+
+  const { data: reviews } = await supabase
+    .from("reviews")
+    .select("author_name, rating, comment, created_at")
+    .eq("listing_id", id)
+    .eq("author_role", "guest")
+    .order("created_at", { ascending: false });
+
   const photos = [...(listing.listing_photos ?? [])].sort((a, b) => a.sort_order - b.sort_order);
   const propertyLabel =
     PROPERTY_TYPES.find((p) => p.value === listing.property_type)?.label ?? listing.property_type;
@@ -41,6 +54,12 @@ export default async function ListingPage({
       <p className="text-neutral-500 mb-6">
         {listing.city}
         {listing.address ? `, ${listing.address}` : ""}
+        {rating && (
+          <>
+            {" · "}
+            <span className="text-neutral-700">★ {rating.avg_rating}</span> ({rating.review_count})
+          </>
+        )}
       </p>
 
       {photos.length > 0 ? (
@@ -91,6 +110,23 @@ export default async function ListingPage({
                   <li key={a}>{AMENITIES.find((am) => am.value === a)?.label ?? a}</li>
                 ))}
               </ul>
+            </div>
+          )}
+
+          {reviews && reviews.length > 0 && (
+            <div>
+              <h2 className="font-medium mb-3">Отзывы{rating ? ` · ★ ${rating.avg_rating}` : ""}</h2>
+              <div className="space-y-4">
+                {reviews.map((r, i) => (
+                  <div key={i} className="border-t border-neutral-100 pt-3">
+                    <div className="flex justify-between items-baseline">
+                      <p className="text-sm font-medium">{r.author_name || "Гость"}</p>
+                      <p className="text-brand text-sm">{"★".repeat(r.rating)}</p>
+                    </div>
+                    {r.comment && <p className="text-sm text-neutral-600 mt-1">{r.comment}</p>}
+                  </div>
+                ))}
+              </div>
             </div>
           )}
         </div>

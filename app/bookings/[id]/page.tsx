@@ -2,6 +2,7 @@ import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { formatRub } from "@/lib/format";
 import { BOOKING_STATUS_LABELS } from "@/lib/listingOptions";
+import ReviewForm from "@/components/ReviewForm";
 
 export default async function BookingStatusPage({
   params,
@@ -26,6 +27,20 @@ export default async function BookingStatusPage({
 
   const listing = (booking as unknown as { listings: { title: string; city: string } | null })
     .listings;
+
+  const today = new Date().toISOString().slice(0, 10);
+  const canReview = booking.status === "confirmed" && booking.check_out <= today;
+
+  let existingReview = null;
+  if (canReview) {
+    const { data } = await supabase
+      .from("reviews")
+      .select("rating, comment")
+      .eq("booking_id", id)
+      .eq("author_role", "guest")
+      .maybeSingle();
+    existingReview = data;
+  }
 
   return (
     <div className="max-w-md mx-auto px-4 py-16 text-center">
@@ -54,6 +69,22 @@ export default async function BookingStatusPage({
           >
             Обновить статус
           </a>
+        </div>
+      )}
+
+      {canReview && (
+        <div className="text-left">
+          {existingReview ? (
+            <div className="border border-neutral-200 rounded-lg p-4">
+              <p className="text-sm font-medium mb-1">Ваш отзыв</p>
+              <p className="text-brand mb-1">{"★".repeat(existingReview.rating)}</p>
+              {existingReview.comment && (
+                <p className="text-sm text-neutral-600">{existingReview.comment}</p>
+              )}
+            </div>
+          ) : (
+            <ReviewForm bookingId={booking.id} authorRole="guest" prompt="Оцените проживание" />
+          )}
         </div>
       )}
     </div>
