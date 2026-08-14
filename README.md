@@ -22,6 +22,11 @@ Supabase, payments via YooKassa (ЮKassa).
   payload, then flips the booking to `confirmed`/`cancelled`).
 - Auth: `/login` (combined signup/signin/forgot), session via `@supabase/ssr`, route protection in
   `proxy.ts` for `/account/*`, `/host/*`, `/book/*`.
+- **Russian/English toggle**: RU/EN switcher in the navbar, backed by a `locale` cookie (default
+  `ru`). `lib/i18n/translations.ts` holds the full dictionary; `getLocale()` (`lib/i18n/locale.ts`)
+  reads the cookie server-side, `LocaleProvider`/`useLocale()` (`components/LocaleProvider.tsx`)
+  exposes it to client components. Covers every page, form, and status label — verified both
+  locales render correctly end-to-end.
 - **Mutual reviews**: after a stay is over (booking `confirmed` and `check_out` has passed), the
   guest can rate the listing/host and the host can rate the guest — one review per side per
   booking, enforced server-side by `validate_review()` in `supabase/schema.sql` (verified directly

@@ -1,7 +1,8 @@
 import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { formatRub } from "@/lib/format";
-import { BOOKING_STATUS_LABELS } from "@/lib/listingOptions";
+import { getLocale } from "@/lib/i18n/locale";
+import { getDictionary } from "@/lib/i18n/translations";
 import ReviewForm from "@/components/ReviewForm";
 
 export default async function BookingStatusPage({
@@ -11,6 +12,8 @@ export default async function BookingStatusPage({
 }) {
   const { id } = await params;
   const supabase = await createClient();
+  const locale = await getLocale();
+  const dict = getDictionary(locale);
 
   const {
     data: { user },
@@ -48,9 +51,10 @@ export default async function BookingStatusPage({
       <p className="text-neutral-500 mb-6">{listing?.city}</p>
 
       <div className="border border-neutral-200 rounded-xl p-6 mb-6">
-        <p className="text-sm text-neutral-500 mb-1">Статус бронирования</p>
+        <p className="text-sm text-neutral-500 mb-1">{dict.bookingStatusPage.label}</p>
         <p className="text-lg font-semibold mb-4">
-          {BOOKING_STATUS_LABELS[booking.status] ?? booking.status}
+          {dict.bookingStatusLabels[booking.status as keyof typeof dict.bookingStatusLabels] ??
+            booking.status}
         </p>
         <p className="text-sm text-neutral-600">
           {booking.check_in} — {booking.check_out}
@@ -60,14 +64,12 @@ export default async function BookingStatusPage({
 
       {booking.status === "pending_payment" && (
         <div>
-          <p className="text-sm text-neutral-500 mb-3">
-            Если вы уже оплатили — статус обновится в течение нескольких секунд.
-          </p>
+          <p className="text-sm text-neutral-500 mb-3">{dict.bookingStatusPage.checkAgainHint}</p>
           <a
             href={`/bookings/${id}`}
             className="inline-block rounded-md bg-brand text-white px-5 py-2.5 font-medium"
           >
-            Обновить статус
+            {dict.bookingStatusPage.refresh}
           </a>
         </div>
       )}
@@ -76,14 +78,18 @@ export default async function BookingStatusPage({
         <div className="text-left">
           {existingReview ? (
             <div className="border border-neutral-200 rounded-lg p-4">
-              <p className="text-sm font-medium mb-1">Ваш отзыв</p>
+              <p className="text-sm font-medium mb-1">{dict.bookingStatusPage.yourReview}</p>
               <p className="text-brand mb-1">{"★".repeat(existingReview.rating)}</p>
               {existingReview.comment && (
                 <p className="text-sm text-neutral-600">{existingReview.comment}</p>
               )}
             </div>
           ) : (
-            <ReviewForm bookingId={booking.id} authorRole="guest" prompt="Оцените проживание" />
+            <ReviewForm
+              bookingId={booking.id}
+              authorRole="guest"
+              prompt={dict.bookingStatusPage.ratePrompt}
+            />
           )}
         </div>
       )}

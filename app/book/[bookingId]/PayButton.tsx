@@ -1,8 +1,10 @@
 "use client";
 
 import { useState } from "react";
+import { useLocale } from "@/components/LocaleProvider";
 
 export default function PayButton({ bookingId }: { bookingId: string }) {
+  const { dict } = useLocale();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -17,11 +19,11 @@ export default function PayButton({ bookingId }: { bookingId: string }) {
       });
       const data = await res.json();
       if (!res.ok || !data.confirmationUrl) {
-        throw new Error(data.error ?? "Не удалось начать оплату");
+        throw new Error(data.error ?? dict.bookConfirm.payError);
       }
       window.location.href = data.confirmationUrl;
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Что-то пошло не так");
+      setError(err instanceof Error ? err.message : dict.bookConfirm.genericError);
       setLoading(false);
     }
   }
@@ -34,7 +36,7 @@ export default function PayButton({ bookingId }: { bookingId: string }) {
         disabled={loading}
         className="w-full rounded-md bg-brand text-white px-4 py-2.5 font-medium disabled:opacity-50"
       >
-        {loading ? "Переходим к оплате..." : "Оплатить через ЮKassa"}
+        {loading ? dict.bookConfirm.paying : dict.bookConfirm.payButton}
       </button>
     </div>
   );

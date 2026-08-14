@@ -3,10 +3,12 @@
 import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { useLocale } from "@/components/LocaleProvider";
 
 export default function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { dict } = useLocale();
   const [mode, setMode] = useState<"signin" | "signup" | "forgot">("signin");
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
@@ -28,7 +30,7 @@ export default function LoginForm() {
           redirectTo: `${window.location.origin}/reset-password`,
         });
         if (resetError) throw resetError;
-        setInfo("Если такой email зарегистрирован, мы отправили на него ссылку для сброса пароля.");
+        setInfo(dict.login.resetSent);
         setLoading(false);
         return;
       }
@@ -47,9 +49,7 @@ export default function LoginForm() {
         if (signUpError) throw signUpError;
 
         if (!data.session) {
-          setError(
-            "Проверьте почту и подтвердите регистрацию по ссылке из письма, затем войдите."
-          );
+          setError(dict.login.confirmEmailNotice);
           setLoading(false);
           return;
         }
@@ -70,7 +70,7 @@ export default function LoginForm() {
           ? err.message
           : typeof err === "object" && err !== null && "message" in err
             ? String((err as { message: unknown }).message)
-            : "Что-то пошло не так";
+            : dict.login.genericError;
       setError(message);
     } finally {
       setLoading(false);
@@ -85,11 +85,11 @@ export default function LoginForm() {
           onClick={() => setMode("signin")}
           className="text-sm text-brand underline mb-6"
         >
-          &larr; Назад ко входу
+          &larr; {dict.login.backToSignIn}
         </button>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium mb-1">Email</label>
+            <label className="block text-sm font-medium mb-1">{dict.login.email}</label>
             <input
               required
               type="email"
@@ -107,7 +107,7 @@ export default function LoginForm() {
             disabled={loading}
             className="w-full rounded-md bg-brand text-white px-4 py-2 disabled:opacity-50"
           >
-            {loading ? "Отправляем..." : "Отправить ссылку"}
+            {loading ? dict.login.sending : dict.login.sendLink}
           </button>
         </form>
       </div>
@@ -122,21 +122,21 @@ export default function LoginForm() {
           onClick={() => setMode("signin")}
           className={`px-3 py-1.5 rounded-md ${mode === "signin" ? "bg-brand text-white" : "bg-neutral-100"}`}
         >
-          Войти
+          {dict.login.signIn}
         </button>
         <button
           type="button"
           onClick={() => setMode("signup")}
           className={`px-3 py-1.5 rounded-md ${mode === "signup" ? "bg-brand text-white" : "bg-neutral-100"}`}
         >
-          Создать аккаунт
+          {dict.login.createAccount}
         </button>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-4">
         {mode === "signup" && (
           <div>
-            <label className="block text-sm font-medium mb-1">Имя</label>
+            <label className="block text-sm font-medium mb-1">{dict.login.fullName}</label>
             <input
               required
               value={fullName}
@@ -146,7 +146,7 @@ export default function LoginForm() {
           </div>
         )}
         <div>
-          <label className="block text-sm font-medium mb-1">Email</label>
+          <label className="block text-sm font-medium mb-1">{dict.login.email}</label>
           <input
             required
             type="email"
@@ -156,7 +156,7 @@ export default function LoginForm() {
           />
         </div>
         <div>
-          <label className="block text-sm font-medium mb-1">Пароль</label>
+          <label className="block text-sm font-medium mb-1">{dict.login.password}</label>
           <input
             required
             type="password"
@@ -174,7 +174,11 @@ export default function LoginForm() {
           disabled={loading}
           className="w-full rounded-md bg-brand text-white px-4 py-2 disabled:opacity-50"
         >
-          {loading ? "Подождите..." : mode === "signup" ? "Создать аккаунт" : "Войти"}
+          {loading
+            ? dict.login.pleaseWait
+            : mode === "signup"
+              ? dict.login.createAccount
+              : dict.login.signIn}
         </button>
 
         {mode === "signin" && (
@@ -183,7 +187,7 @@ export default function LoginForm() {
             onClick={() => setMode("forgot")}
             className="text-sm text-neutral-500 underline block mx-auto"
           >
-            Забыли пароль?
+            {dict.login.forgotPassword}
           </button>
         )}
       </form>

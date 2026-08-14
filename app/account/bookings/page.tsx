@@ -2,7 +2,8 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { formatRub } from "@/lib/format";
-import { BOOKING_STATUS_LABELS } from "@/lib/listingOptions";
+import { getLocale } from "@/lib/i18n/locale";
+import { getDictionary } from "@/lib/i18n/translations";
 
 export default async function MyBookingsPage() {
   const supabase = await createClient();
@@ -10,6 +11,9 @@ export default async function MyBookingsPage() {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) redirect("/login?next=/account/bookings");
+
+  const locale = await getLocale();
+  const dict = getDictionary(locale);
 
   const { data: bookings } = await supabase
     .from("bookings")
@@ -19,10 +23,10 @@ export default async function MyBookingsPage() {
 
   return (
     <div className="max-w-2xl mx-auto px-4 py-12">
-      <h1 className="text-2xl font-semibold mb-6">Мои бронирования</h1>
+      <h1 className="text-2xl font-semibold mb-6">{dict.account.myBookings}</h1>
 
       {!bookings || bookings.length === 0 ? (
-        <p className="text-neutral-500">Пока нет бронирований.</p>
+        <p className="text-neutral-500">{dict.account.noBookings}</p>
       ) : (
         <div className="space-y-3">
           {bookings.map((b) => {
@@ -43,7 +47,8 @@ export default async function MyBookingsPage() {
                   </div>
                   <div className="text-right">
                     <p className="text-sm font-medium">
-                      {BOOKING_STATUS_LABELS[b.status] ?? b.status}
+                      {dict.bookingStatusLabels[b.status as keyof typeof dict.bookingStatusLabels] ??
+                        b.status}
                     </p>
                     <p className="text-sm text-neutral-500">{formatRub(b.total_amount)}</p>
                   </div>

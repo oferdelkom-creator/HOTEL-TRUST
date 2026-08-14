@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { formatRub } from "@/lib/format";
+import { useLocale } from "@/components/LocaleProvider";
 
 function nightsBetween(checkIn: string, checkOut: string) {
   const start = new Date(checkIn);
@@ -30,6 +31,7 @@ export default function BookingForm({
   defaultGuests?: string;
 }) {
   const router = useRouter();
+  const { dict } = useLocale();
   const [checkIn, setCheckIn] = useState(defaultCheckIn ?? "");
   const [checkOut, setCheckOut] = useState(defaultCheckOut ?? "");
   const [guests, setGuests] = useState(defaultGuests ?? "1");
@@ -47,7 +49,7 @@ export default function BookingForm({
     setError(null);
 
     if (nights <= 0) {
-      setError("Выберите корректные даты заезда и выезда");
+      setError(dict.bookingForm.invalidDates);
       return;
     }
 
@@ -83,7 +85,7 @@ export default function BookingForm({
       .single();
 
     if (insertError || !data) {
-      setError(insertError?.message ?? "Не удалось создать бронирование");
+      setError(insertError?.message ?? dict.bookingForm.genericError);
       setLoading(false);
       return;
     }
@@ -96,11 +98,15 @@ export default function BookingForm({
       onSubmit={handleSubmit}
       className="border border-neutral-200 rounded-xl p-5 sticky top-6 space-y-3"
     >
-      <p className="text-lg font-semibold">{formatRub(pricePerNight)} / ночь</p>
+      <p className="text-lg font-semibold">
+        {formatRub(pricePerNight)} {dict.bookingForm.perNight}
+      </p>
 
       <div className="grid grid-cols-2 gap-2">
         <div>
-          <label className="block text-xs font-medium text-neutral-500 mb-1">Заезд</label>
+          <label className="block text-xs font-medium text-neutral-500 mb-1">
+            {dict.bookingForm.checkIn}
+          </label>
           <input
             required
             type="date"
@@ -110,7 +116,9 @@ export default function BookingForm({
           />
         </div>
         <div>
-          <label className="block text-xs font-medium text-neutral-500 mb-1">Выезд</label>
+          <label className="block text-xs font-medium text-neutral-500 mb-1">
+            {dict.bookingForm.checkOut}
+          </label>
           <input
             required
             type="date"
@@ -123,7 +131,7 @@ export default function BookingForm({
 
       <div>
         <label className="block text-xs font-medium text-neutral-500 mb-1">
-          Гостей (макс. {maxGuests})
+          {dict.bookingForm.guestsMax(maxGuests)}
         </label>
         <input
           required
@@ -140,18 +148,18 @@ export default function BookingForm({
         <div className="text-sm text-neutral-600 space-y-1 pt-2 border-t border-neutral-100">
           <div className="flex justify-between">
             <span>
-              {formatRub(pricePerNight)} × {nights} ноч.
+              {formatRub(pricePerNight)} × {nights} {dict.bookingForm.nightsAbbr}
             </span>
             <span>{formatRub(pricePerNight * nights)}</span>
           </div>
           {cleaningFee > 0 && (
             <div className="flex justify-between">
-              <span>Уборка</span>
+              <span>{dict.bookingForm.cleaning}</span>
               <span>{formatRub(cleaningFee)}</span>
             </div>
           )}
           <div className="flex justify-between font-semibold text-neutral-900 pt-1">
-            <span>Итого</span>
+            <span>{dict.bookingForm.total}</span>
             <span>{formatRub(total)}</span>
           </div>
         </div>
@@ -164,7 +172,7 @@ export default function BookingForm({
         disabled={loading}
         className="w-full rounded-md bg-brand text-white px-4 py-2.5 font-medium disabled:opacity-50"
       >
-        {loading ? "Подождите..." : "Забронировать"}
+        {loading ? dict.bookingForm.submitting : dict.bookingForm.submit}
       </button>
     </form>
   );

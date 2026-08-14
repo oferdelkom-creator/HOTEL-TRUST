@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { useLocale } from "@/components/LocaleProvider";
 
 type BlockedDate = { id: string; date: string };
 
@@ -14,6 +15,7 @@ export default function BlockedDatesManager({
   blockedDates: BlockedDate[];
 }) {
   const router = useRouter();
+  const { dict } = useLocale();
   const [date, setDate] = useState("");
   const [error, setError] = useState<string | null>(null);
 
@@ -49,7 +51,7 @@ export default function BlockedDatesManager({
           className="rounded-md border border-neutral-300 px-3 py-2 text-sm"
         />
         <button type="submit" className="rounded-md bg-neutral-900 text-white px-4 py-2 text-sm">
-          Заблокировать дату
+          {dict.blockedDates.addButton}
         </button>
       </form>
       {error && <p className="text-sm text-red-600 mb-2">{error}</p>}

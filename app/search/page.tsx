@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { formatRub } from "@/lib/format";
+import { getLocale } from "@/lib/i18n/locale";
+import { getDictionary } from "@/lib/i18n/translations";
 
 type SearchParams = {
   city?: string;
@@ -16,6 +18,8 @@ export default async function SearchPage({
 }) {
   const params = await searchParams;
   const supabase = await createClient();
+  const locale = await getLocale();
+  const dict = getDictionary(locale);
 
   let query = supabase
     .from("listings")
@@ -68,13 +72,13 @@ export default async function SearchPage({
   return (
     <div className="max-w-6xl mx-auto px-4 py-12">
       <h1 className="text-2xl font-semibold mb-6">
-        {params.city ? `Жильё в городе ${params.city}` : "Всё доступное жильё"}
+        {params.city ? `${dict.search.titleForCity} ${params.city}` : dict.search.titleAll}
       </h1>
 
-      {error && <p className="text-red-600">Не удалось загрузить объявления.</p>}
+      {error && <p className="text-red-600">{dict.search.loadError}</p>}
 
       {availableListings.length === 0 ? (
-        <p className="text-neutral-500">Ничего не найдено. Попробуйте изменить параметры поиска.</p>
+        <p className="text-neutral-500">{dict.search.empty}</p>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
           {availableListings.map((listing) => {
@@ -95,7 +99,7 @@ export default async function SearchPage({
                     <img src={cover} alt={listing.title} className="w-full h-full object-cover" />
                   ) : (
                     <div className="w-full h-full flex items-center justify-center text-neutral-400 text-sm">
-                      Нет фото
+                      {dict.search.noPhoto}
                     </div>
                   )}
                 </div>
@@ -109,7 +113,9 @@ export default async function SearchPage({
                     )}
                   </div>
                   <h2 className="font-medium mb-1">{listing.title}</h2>
-                  <p className="font-semibold">{formatRub(listing.price_per_night)} / ночь</p>
+                  <p className="font-semibold">
+                    {formatRub(listing.price_per_night)} {dict.search.perNight}
+                  </p>
                 </div>
               </Link>
             );

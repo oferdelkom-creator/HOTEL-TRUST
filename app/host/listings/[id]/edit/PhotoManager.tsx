@@ -3,6 +3,7 @@
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { useLocale } from "@/components/LocaleProvider";
 
 type Photo = { id: string; url: string; sort_order: number };
 
@@ -14,6 +15,7 @@ export default function PhotoManager({
   photos: Photo[];
 }) {
   const router = useRouter();
+  const { dict } = useLocale();
   const fileInput = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -69,7 +71,7 @@ export default function PhotoManager({
               onClick={() => handleDelete(p.id)}
               className="absolute top-1 right-1 bg-black/60 text-white text-xs rounded px-1.5 py-0.5"
             >
-              Удалить
+              {dict.photoManager.delete}
             </button>
           </div>
         ))}
@@ -84,7 +86,7 @@ export default function PhotoManager({
         disabled={uploading}
         className="text-sm"
       />
-      {uploading && <p className="text-sm text-neutral-500 mt-1">Загружаем...</p>}
+      {uploading && <p className="text-sm text-neutral-500 mt-1">{dict.photoManager.uploading}</p>}
       {error && <p className="text-sm text-red-600 mt-1">{error}</p>}
     </div>
   );

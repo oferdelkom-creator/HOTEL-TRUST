@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { useLocale } from "./LocaleProvider";
 
 export default function ReviewForm({
   bookingId,
@@ -14,6 +15,7 @@ export default function ReviewForm({
   prompt: string;
 }) {
   const router = useRouter();
+  const { dict } = useLocale();
   const [rating, setRating] = useState(5);
   const [comment, setComment] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -67,7 +69,7 @@ export default function ReviewForm({
             key={n}
             type="button"
             onClick={() => setRating(n)}
-            aria-label={`${n} звёзд`}
+            aria-label={dict.reviewForm.starLabel(n)}
             className={`text-2xl leading-none ${n <= rating ? "text-brand" : "text-neutral-300"}`}
           >
             ★
@@ -78,7 +80,7 @@ export default function ReviewForm({
         rows={3}
         value={comment}
         onChange={(e) => setComment(e.target.value)}
-        placeholder="Комментарий (необязательно)"
+        placeholder={dict.reviewForm.commentPlaceholder}
         className="w-full rounded-md border border-neutral-300 px-3 py-2 text-sm"
       />
       {error && <p className="text-sm text-red-600">{error}</p>}
@@ -87,7 +89,7 @@ export default function ReviewForm({
         disabled={loading}
         className="rounded-md bg-brand text-white px-4 py-2 text-sm font-medium disabled:opacity-50"
       >
-        {loading ? "Отправляем..." : "Отправить отзыв"}
+        {loading ? dict.reviewForm.sending : dict.reviewForm.submit}
       </button>
     </form>
   );

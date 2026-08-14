@@ -2,20 +2,27 @@ import type { Metadata } from "next";
 import "./globals.css";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
+import { LocaleProvider } from "@/components/LocaleProvider";
+import { getLocale } from "@/lib/i18n/locale";
+import { getDictionary } from "@/lib/i18n/translations";
 
-export const metadata: Metadata = {
-  title: "Гриша — аренда жилья посуточно",
-  description:
-    "Бронируйте квартиры и дома посуточно по всей России. Оплата картой «Мир» и через СБП — работает там, где Airbnb и Booking.com недоступны.",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const locale = await getLocale();
+  const dict = getDictionary(locale);
+  return { title: dict.meta.title, description: dict.meta.description };
+}
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  const locale = await getLocale();
+
   return (
-    <html lang="ru" className="h-full antialiased">
+    <html lang={locale} className="h-full antialiased">
       <body className="min-h-full flex flex-col bg-neutral-50 text-neutral-900">
-        <Navbar />
-        <main className="flex-1">{children}</main>
-        <Footer />
+        <LocaleProvider initialLocale={locale}>
+          <Navbar />
+          <main className="flex-1">{children}</main>
+          <Footer />
+        </LocaleProvider>
       </body>
     </html>
   );

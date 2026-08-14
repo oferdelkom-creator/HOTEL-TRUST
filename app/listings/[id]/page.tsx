@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { AMENITIES, PROPERTY_TYPES, ROOM_TYPES } from "@/lib/listingOptions";
+import { getLocale } from "@/lib/i18n/locale";
+import { getDictionary } from "@/lib/i18n/translations";
 import BookingForm from "./BookingForm";
 
 type Params = { id: string };
@@ -16,6 +17,8 @@ export default async function ListingPage({
   const { id } = await params;
   const sp = await searchParams;
   const supabase = await createClient();
+  const locale = await getLocale();
+  const dict = getDictionary(locale);
 
   const { data: listing } = await supabase
     .from("listings")
@@ -45,8 +48,10 @@ export default async function ListingPage({
 
   const photos = [...(listing.listing_photos ?? [])].sort((a, b) => a.sort_order - b.sort_order);
   const propertyLabel =
-    PROPERTY_TYPES.find((p) => p.value === listing.property_type)?.label ?? listing.property_type;
-  const roomLabel = ROOM_TYPES.find((r) => r.value === listing.room_type)?.label ?? listing.room_type;
+    dict.propertyTypeLabels[listing.property_type as keyof typeof dict.propertyTypeLabels] ??
+    listing.property_type;
+  const roomLabel =
+    dict.roomTypeLabels[listing.room_type as keyof typeof dict.roomTypeLabels] ?? listing.room_type;
 
   return (
     <div className="max-w-5xl mx-auto px-4 py-12">
@@ -76,7 +81,7 @@ export default async function ListingPage({
         </div>
       ) : (
         <div className="mb-8 h-64 rounded-xl bg-neutral-100 flex items-center justify-center text-neutral-400">
-          Нет фото
+          {dict.listing.noPhoto}
         </div>
       )}
 
@@ -87,27 +92,35 @@ export default async function ListingPage({
               {propertyLabel} · {roomLabel}
             </h2>
             <p className="text-sm text-neutral-600">
-              До {listing.max_guests} гостей · {listing.bedrooms} спален · {listing.beds} спальных
-              мест · {listing.bathrooms} санузлов
+              {dict.listing.guestsBedsBaths(
+                listing.max_guests,
+                listing.bedrooms,
+                listing.beds,
+                listing.bathrooms
+              )}
             </p>
             {listing.host_name && (
-              <p className="text-sm text-neutral-500 mt-1">Хозяин: {listing.host_name}</p>
+              <p className="text-sm text-neutral-500 mt-1">
+                {dict.listing.host}: {listing.host_name}
+              </p>
             )}
           </div>
 
           <div>
-            <h2 className="font-medium mb-2">Описание</h2>
+            <h2 className="font-medium mb-2">{dict.listing.description}</h2>
             <p className="text-neutral-700 whitespace-pre-line">
-              {listing.description || "Хозяин пока не добавил описание."}
+              {listing.description || dict.listing.noDescription}
             </p>
           </div>
 
           {listing.amenities?.length > 0 && (
             <div>
-              <h2 className="font-medium mb-2">Удобства</h2>
+              <h2 className="font-medium mb-2">{dict.listing.amenities}</h2>
               <ul className="grid grid-cols-2 gap-2 text-sm text-neutral-700">
                 {listing.amenities.map((a: string) => (
-                  <li key={a}>{AMENITIES.find((am) => am.value === a)?.label ?? a}</li>
+                  <li key={a}>
+                    {dict.amenityLabels[a as keyof typeof dict.amenityLabels] ?? a}
+                  </li>
                 ))}
               </ul>
             </div>
@@ -115,12 +128,15 @@ export default async function ListingPage({
 
           {reviews && reviews.length > 0 && (
             <div>
-              <h2 className="font-medium mb-3">Отзывы{rating ? ` · ★ ${rating.avg_rating}` : ""}</h2>
+              <h2 className="font-medium mb-3">
+                {dict.listing.reviews}
+                {rating ? ` · ★ ${rating.avg_rating}` : ""}
+              </h2>
               <div className="space-y-4">
                 {reviews.map((r, i) => (
                   <div key={i} className="border-t border-neutral-100 pt-3">
                     <div className="flex justify-between items-baseline">
-                      <p className="text-sm font-medium">{r.author_name || "Гость"}</p>
+                      <p className="text-sm font-medium">{r.author_name || "—"}</p>
                       <p className="text-brand text-sm">{"★".repeat(r.rating)}</p>
                     </div>
                     {r.comment && <p className="text-sm text-neutral-600 mt-1">{r.comment}</p>}

@@ -1,12 +1,17 @@
 import Link from "next/link";
 import Logo from "./Logo";
+import LanguageSwitcher from "./LanguageSwitcher";
 import { createClient } from "@/lib/supabase/server";
+import { getLocale } from "@/lib/i18n/locale";
+import { getDictionary } from "@/lib/i18n/translations";
 
 export default async function Navbar() {
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
+  const locale = await getLocale();
+  const dict = getDictionary(locale);
 
   return (
     <header className="border-b border-neutral-200 bg-white">
@@ -16,21 +21,22 @@ export default async function Navbar() {
         </Link>
         <nav className="flex items-center gap-6 text-sm">
           <Link href="/search" className="text-neutral-700 hover:text-brand">
-            Жильё
+            {dict.nav.listings}
           </Link>
           <Link href="/host" className="text-neutral-700 hover:text-brand">
-            Сдать жильё
+            {dict.nav.hostCta}
           </Link>
           {user && (
             <Link href="/account/bookings" className="text-neutral-700 hover:text-brand">
-              Мои поездки
+              {dict.nav.myTrips}
             </Link>
           )}
+          <LanguageSwitcher />
           <Link
             href={user ? "/account" : "/login"}
             className="rounded-md bg-brand text-white px-4 py-2 hover:bg-brand-dark"
           >
-            {user ? "Профиль" : "Войти"}
+            {user ? dict.nav.profile : dict.nav.signIn}
           </Link>
         </nav>
       </div>

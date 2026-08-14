@@ -3,9 +3,11 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { useLocale } from "@/components/LocaleProvider";
 
 export default function ResetPasswordForm() {
   const router = useRouter();
+  const { dict } = useLocale();
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -34,7 +36,7 @@ export default function ResetPasswordForm() {
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <div>
-        <label className="block text-sm font-medium mb-1">Новый пароль</label>
+        <label className="block text-sm font-medium mb-1">{dict.resetPassword.newPassword}</label>
         <input
           required
           type="password"
@@ -52,7 +54,7 @@ export default function ResetPasswordForm() {
         disabled={loading}
         className="w-full rounded-md bg-brand text-white px-4 py-2 disabled:opacity-50"
       >
-        {loading ? "Сохраняем..." : "Сохранить пароль"}
+        {loading ? dict.resetPassword.saving : dict.resetPassword.save}
       </button>
     </form>
   );
