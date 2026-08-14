@@ -25,10 +25,10 @@ export default function LoginForm() {
     try {
       if (mode === "forgot") {
         const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
-          redirectTo: "https://hoteltrust.org/reset-password",
+          redirectTo: `${window.location.origin}/reset-password`,
         });
         if (resetError) throw resetError;
-        setInfo("If that email has an account, a reset link has been sent - check your inbox.");
+        setInfo("Если такой email зарегистрирован, мы отправили на него ссылку для сброса пароля.");
         setLoading(false);
         return;
       }
@@ -46,19 +46,9 @@ export default function LoginForm() {
         });
         if (signUpError) throw signUpError;
 
-        if (data.user) {
-          await fetch("/api/notify/welcome", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ profileId: data.user.id }),
-          }).catch(() => {});
-        }
-
         if (!data.session) {
-          // Email confirmation is required on this project - nothing more
-          // to do client-side until they click the confirmation link.
           setError(
-            "Check your email to confirm your account before signing in - we've sent a confirmation link."
+            "Проверьте почту и подтвердите регистрацию по ссылке из письма, затем войдите."
           );
           setLoading(false);
           return;
@@ -71,19 +61,16 @@ export default function LoginForm() {
         if (signInError) throw signInError;
       }
 
-      const next = searchParams.get("next") || "/owner";
+      const next = searchParams.get("next") || "/account";
       router.push(next);
       router.refresh();
     } catch (err) {
-      // Supabase auth/postgrest errors are plain objects, not Error
-      // instances, so `err instanceof Error` alone was silently swallowing
-      // the real reason and always showing a useless generic message.
       const message =
         err instanceof Error
           ? err.message
           : typeof err === "object" && err !== null && "message" in err
             ? String((err as { message: unknown }).message)
-            : "Something went wrong";
+            : "Что-то пошло не так";
       setError(message);
     } finally {
       setLoading(false);
@@ -96,9 +83,9 @@ export default function LoginForm() {
         <button
           type="button"
           onClick={() => setMode("signin")}
-          className="text-sm text-brand-green underline mb-6"
+          className="text-sm text-brand underline mb-6"
         >
-          &larr; Back to sign in
+          &larr; Назад ко входу
         </button>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
@@ -113,14 +100,14 @@ export default function LoginForm() {
           </div>
 
           {error && <p className="text-sm text-red-600">{error}</p>}
-          {info && <p className="text-sm text-brand-green">{info}</p>}
+          {info && <p className="text-sm text-brand">{info}</p>}
 
           <button
             type="submit"
             disabled={loading}
-            className="w-full rounded-md bg-brand-green text-brand-gold px-4 py-2 disabled:opacity-50"
+            className="w-full rounded-md bg-brand text-white px-4 py-2 disabled:opacity-50"
           >
-            {loading ? "Sending..." : "Send reset link"}
+            {loading ? "Отправляем..." : "Отправить ссылку"}
           </button>
         </form>
       </div>
@@ -133,23 +120,23 @@ export default function LoginForm() {
         <button
           type="button"
           onClick={() => setMode("signin")}
-          className={`px-3 py-1.5 rounded-md ${mode === "signin" ? "bg-brand-green text-brand-gold" : "bg-neutral-100"}`}
+          className={`px-3 py-1.5 rounded-md ${mode === "signin" ? "bg-brand text-white" : "bg-neutral-100"}`}
         >
-          Sign in
+          Войти
         </button>
         <button
           type="button"
           onClick={() => setMode("signup")}
-          className={`px-3 py-1.5 rounded-md ${mode === "signup" ? "bg-brand-green text-brand-gold" : "bg-neutral-100"}`}
+          className={`px-3 py-1.5 rounded-md ${mode === "signup" ? "bg-brand text-white" : "bg-neutral-100"}`}
         >
-          Create account
+          Создать аккаунт
         </button>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-4">
         {mode === "signup" && (
           <div>
-            <label className="block text-sm font-medium mb-1">Full name</label>
+            <label className="block text-sm font-medium mb-1">Имя</label>
             <input
               required
               value={fullName}
@@ -169,7 +156,7 @@ export default function LoginForm() {
           />
         </div>
         <div>
-          <label className="block text-sm font-medium mb-1">Password</label>
+          <label className="block text-sm font-medium mb-1">Пароль</label>
           <input
             required
             type="password"
@@ -185,9 +172,9 @@ export default function LoginForm() {
         <button
           type="submit"
           disabled={loading}
-          className="w-full rounded-md bg-brand-green text-brand-gold px-4 py-2 disabled:opacity-50"
+          className="w-full rounded-md bg-brand text-white px-4 py-2 disabled:opacity-50"
         >
-          {loading ? "Please wait..." : mode === "signup" ? "Create account" : "Sign in"}
+          {loading ? "Подождите..." : mode === "signup" ? "Создать аккаунт" : "Войти"}
         </button>
 
         {mode === "signin" && (
@@ -196,7 +183,7 @@ export default function LoginForm() {
             onClick={() => setMode("forgot")}
             className="text-sm text-neutral-500 underline block mx-auto"
           >
-            Forgot password?
+            Забыли пароль?
           </button>
         )}
       </form>

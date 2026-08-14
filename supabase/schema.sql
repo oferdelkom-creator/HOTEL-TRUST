@@ -1,4 +1,4 @@
--- Hotel Trust: credit-based room exchange for verified hotel owners.
+-- Grisha: Airbnb-style short-term rental marketplace for guests and hosts in Russia.
 -- Run this whole file once in the Supabase SQL editor on a fresh project.
 
 -- ============================================================
@@ -8,42 +8,33 @@ create table profiles (
   id uuid primary key references auth.users (id) on delete cascade,
   email text not null,
   full_name text not null,
-  role text not null default 'hotel_owner' check (role in ('hotel_owner', 'admin')),
+  phone text,
   created_at timestamptz not null default now()
 );
 
--- security definer so RLS policies can check "is the current user an admin?"
--- without recursively re-evaluating RLS on profiles for every check.
-create function is_admin() returns boolean
-language sql security definer stable as $$
-  select exists (
-    select 1 from profiles where id = auth.uid() and role = 'admin'
-  );
-$$;
-
 alter table profiles enable row level security;
 
-create policy "profiles_select" on profiles for select
-  using (auth.uid() = id or is_admin());
+create policy "profiles_select_own" on profiles for select
+  using (auth.uid() = id);
 
 create policy "profiles_insert_own" on profiles for insert
   with check (auth.uid() = id);
 
+create policy "profiles_update_own" on profiles for update
+  using (auth.uid() = id);
+
 -- Auto-creates the profiles row the moment an auth user is created, not
 -- only when the client happens to have an active session right after
--- signup. Matters because if email confirmation is required, signUp()
--- returns no session, so a client-side insert (which needs auth.uid() to
--- pass RLS) would silently fail - this trigger fires unconditionally as
--- part of the signup itself, security definer so it bypasses RLS entirely.
+-- signup - matters when email confirmation delays the session, since a
+-- client-side insert needs auth.uid() to pass RLS.
 create function handle_new_user() returns trigger
 language plpgsql security definer as $$
 begin
-  insert into public.profiles (id, email, full_name, role)
+  insert into public.profiles (id, email, full_name)
   values (
     new.id,
     new.email,
-    coalesce(new.raw_user_meta_data ->> 'full_name', ''),
-    'hotel_owner'
+    coalesce(new.raw_user_meta_data ->> 'full_name', '')
   )
   on conflict (id) do nothing;
   return new;
@@ -55,403 +46,256 @@ create trigger on_auth_user_created
   for each row execute function handle_new_user();
 
 -- ============================================================
--- hotels
+-- listings: any signed-in user can host - no admin approval gate.
 -- ============================================================
-create table hotels (
+create table listings (
   id uuid primary key default gen_random_uuid(),
-  owner_id uuid not null references profiles (id) on delete cascade,
-  name text not null,
-  country text not null,
+  host_id uuid not null references profiles (id) on delete cascade,
+  -- snapshotted from the host's own profile at insert time (self-select
+  -- always passes RLS) so listing/search pages can show a host name
+  -- without needing a cross-user read policy on profiles.
+  host_name text not null default '',
+  title text not null,
+  description text not null default '',
   city text not null,
-  stars smallint not null check (stars in (3, 4, 5)),
-  -- ownership verification is the trust gate for the whole platform;
-  -- only admins may move a hotel out of 'pending' (see trigger below).
-  verification_status text not null default 'pending'
-    check (verification_status in ('pending', 'verified', 'rejected')),
-  verification_proof_url text,
-  verification_note text,
-  -- what this host offers beyond the room (upgrade if available, welcome
-  -- wine, breakfast, etc). Self-declared by the owner - not trust-sensitive
-  -- like season_tier, since it's just their own marketing copy, not
-  -- something that affects credit pricing.
-  perks text,
-  -- business/legal entity name, distinct from the personal owner name on
-  -- the profiles row (e.g. an owner might run the hotel under a company).
-  business_name text,
-  -- accessibility features (wheelchair access, elevator, etc) - free text,
-  -- self-declared, same as perks.
-  accessibility text,
-  -- phone/WhatsApp for other members to reach this hotel directly - shown
-  -- on marketplace listings the same as everything else on a verified
-  -- hotel's row, so treat it as semi-public within the network.
-  contact_info text,
+  address text not null default '',
+  property_type text not null default 'apartment'
+    check (property_type in ('apartment', 'house', 'room', 'studio')),
+  room_type text not null default 'entire_place'
+    check (room_type in ('entire_place', 'private_room', 'shared_room')),
+  max_guests smallint not null default 1 check (max_guests > 0),
+  bedrooms smallint not null default 1 check (bedrooms >= 0),
+  beds smallint not null default 1 check (beds >= 0),
+  bathrooms smallint not null default 1 check (bathrooms >= 0),
+  price_per_night numeric(10, 2) not null check (price_per_night > 0),
+  cleaning_fee numeric(10, 2) not null default 0 check (cleaning_fee >= 0),
+  amenities text[] not null default '{}',
+  status text not null default 'draft' check (status in ('draft', 'published', 'archived')),
   created_at timestamptz not null default now()
 );
 
-alter table hotels enable row level security;
+create index listings_city_status_idx on listings (city, status);
 
-create policy "hotels_select" on hotels for select
-  using (owner_id = auth.uid() or verification_status = 'verified' or is_admin());
+alter table listings enable row level security;
 
-create policy "hotels_insert_own" on hotels for insert
-  with check (owner_id = auth.uid());
+create policy "listings_select" on listings for select
+  using (status = 'published' or host_id = auth.uid());
 
-create policy "hotels_update_own_or_admin" on hotels for update
-  using (owner_id = auth.uid() or is_admin());
+create policy "listings_insert_own" on listings for insert
+  with check (host_id = auth.uid());
 
-create function lock_verification_fields() returns trigger
-language plpgsql as $$
-begin
-  if not is_admin() then
-    new.verification_status := old.verification_status;
-    new.verification_note := old.verification_note;
-  end if;
-  return new;
-end;
-$$;
+create policy "listings_update_own" on listings for update
+  using (host_id = auth.uid());
 
-create trigger trg_lock_verification
-  before update on hotels
-  for each row execute function lock_verification_fields();
+create policy "listings_delete_own" on listings for delete
+  using (host_id = auth.uid());
 
 -- ============================================================
--- night_offers: date ranges an owner opens to the exchange pool.
--- Booked as a whole block (no partial-range splitting) to keep the
--- MVP simple - same tradeoff other starters in this workspace made.
+-- listing_photos
 -- ============================================================
-create table night_offers (
+create table listing_photos (
   id uuid primary key default gen_random_uuid(),
-  hotel_id uuid not null references hotels (id) on delete cascade,
-  start_date date not null,
-  end_date date not null check (end_date > start_date),
-  nights smallint generated always as (end_date - start_date) stored,
-  -- season_tier drives the credit price multiplier. It is admin-set,
-  -- never self-declared, so an owner can't inflate their own exchange
-  -- rate by labeling everything "high season".
-  season_tier text not null default 'regular'
-    check (season_tier in ('low', 'regular', 'high')),
-  status text not null default 'open' check (status in ('open', 'booked', 'withdrawn')),
-  created_at timestamptz not null default now()
+  listing_id uuid not null references listings (id) on delete cascade,
+  url text not null,
+  sort_order smallint not null default 0
 );
 
-alter table night_offers enable row level security;
+alter table listing_photos enable row level security;
 
-create policy "night_offers_select" on night_offers for select
+create policy "listing_photos_select" on listing_photos for select
   using (
-    (status = 'open' and exists (
-      select 1 from hotels h
-      where h.id = night_offers.hotel_id and h.verification_status = 'verified'
-    ))
-    or hotel_id in (select id from hotels where owner_id = auth.uid())
-    or is_admin()
-  );
-
-create policy "night_offers_insert_own" on night_offers for insert
-  with check (
-    hotel_id in (
-      select id from hotels where owner_id = auth.uid() and verification_status = 'verified'
+    exists (
+      select 1 from listings l
+      where l.id = listing_photos.listing_id
+        and (l.status = 'published' or l.host_id = auth.uid())
     )
   );
 
-create policy "night_offers_update_own_or_admin" on night_offers for update
-  using (hotel_id in (select id from hotels where owner_id = auth.uid()) or is_admin());
+create policy "listing_photos_insert_own" on listing_photos for insert
+  with check (
+    exists (select 1 from listings l where l.id = listing_photos.listing_id and l.host_id = auth.uid())
+  );
 
-create function lock_season_tier() returns trigger
-language plpgsql as $$
-begin
-  if new.season_tier is distinct from old.season_tier and not is_admin() then
-    new.season_tier := old.season_tier;
-  end if;
-  return new;
-end;
-$$;
-
-create trigger trg_lock_season_tier
-  before update on night_offers
-  for each row execute function lock_season_tier();
+create policy "listing_photos_delete_own" on listing_photos for delete
+  using (
+    exists (select 1 from listings l where l.id = listing_photos.listing_id and l.host_id = auth.uid())
+  );
 
 -- ============================================================
--- bookings: one hotel's credits redeemed for nights at another hotel.
+-- blocked_dates: host-managed manual blocks (on top of confirmed bookings).
+-- ============================================================
+create table blocked_dates (
+  id uuid primary key default gen_random_uuid(),
+  listing_id uuid not null references listings (id) on delete cascade,
+  date date not null,
+  reason text,
+  unique (listing_id, date)
+);
+
+alter table blocked_dates enable row level security;
+
+create policy "blocked_dates_select" on blocked_dates for select
+  using (
+    exists (
+      select 1 from listings l
+      where l.id = blocked_dates.listing_id
+        and (l.status = 'published' or l.host_id = auth.uid())
+    )
+  );
+
+create policy "blocked_dates_insert_own" on blocked_dates for insert
+  with check (
+    exists (select 1 from listings l where l.id = blocked_dates.listing_id and l.host_id = auth.uid())
+  );
+
+create policy "blocked_dates_delete_own" on blocked_dates for delete
+  using (
+    exists (select 1 from listings l where l.id = blocked_dates.listing_id and l.host_id = auth.uid())
+  );
+
+-- ============================================================
+-- bookings: priced and validated server-side, never trust client input.
 -- ============================================================
 create table bookings (
   id uuid primary key default gen_random_uuid(),
-  night_offer_id uuid not null references night_offers (id),
-  host_hotel_id uuid not null references hotels (id),
-  requesting_hotel_id uuid not null references hotels (id),
-  check (host_hotel_id <> requesting_hotel_id),
-  -- who actually checks in - widens usage beyond the owner's own travel
-  -- calendar, per the "owner, family, or staff" redemption model.
-  guest_type text not null check (guest_type in ('owner', 'family', 'employee')),
-  guest_name text not null,
-  -- snapshotted at booking time so later star/season edits don't
-  -- retroactively change the price of an already-booked stay.
-  stars_at_booking smallint not null default 0,
-  season_tier_at_booking text not null default 'regular',
-  nights smallint not null default 0,
-  credits_cost numeric(8, 2) not null default 0,
-  status text not null default 'pending'
-    check (status in ('pending', 'confirmed', 'completed', 'cancelled')),
-  -- 'pending' = a real-money hold is owed because this booking pushed
-  -- the requesting hotel's credit balance negative; see settle_booking().
-  hold_status text not null default 'none'
-    check (hold_status in ('none', 'pending', 'released', 'captured')),
+  listing_id uuid not null references listings (id),
+  guest_id uuid not null references profiles (id),
+  -- snapshotted from the guest's own profile at insert time, same reasoning
+  -- as listings.host_name - lets the host's bookings view show a guest
+  -- name without a cross-user read policy on profiles.
+  guest_name text not null default '',
+  check_in date not null,
+  check_out date not null check (check_out > check_in),
+  nights smallint generated always as (check_out - check_in) stored,
+  guests_count smallint not null default 1 check (guests_count > 0),
+  price_per_night_snapshot numeric(10, 2) not null default 0,
+  cleaning_fee_snapshot numeric(10, 2) not null default 0,
+  total_amount numeric(10, 2) not null default 0,
+  status text not null default 'pending_payment'
+    check (status in ('pending_payment', 'confirmed', 'cancelled', 'completed')),
   created_at timestamptz not null default now()
 );
 
--- Claims the night_offer and prices the booking server-side (never trust
--- client-submitted credits_cost - it's the platform's currency). Locks
--- the offer row so two concurrent bookings can't both claim it.
-create function claim_night_offer_and_price() returns trigger
+create index bookings_listing_idx on bookings (listing_id);
+create index bookings_guest_idx on bookings (guest_id);
+
+-- Prices the booking from the listing's current price (the client never
+-- gets to set its own total) and rejects dates that overlap an existing
+-- pending/confirmed booking or a host-blocked date. Locks the listing row
+-- first so two concurrent booking attempts on the same listing serialize
+-- instead of both passing the overlap check.
+create function price_and_validate_booking() returns trigger
 language plpgsql as $$
 declare
-  v_offer night_offers%rowtype;
-  v_hotel hotels%rowtype;
-  v_star_value numeric;
-  v_season_mult numeric;
-  v_balance_before numeric;
+  v_listing listings%rowtype;
+  v_conflict boolean;
 begin
-  select * into v_offer from night_offers where id = new.night_offer_id for update;
-  if v_offer.id is null then
-    raise exception 'night_offer not found';
+  select * into v_listing from listings where id = new.listing_id for update;
+  if v_listing.id is null or v_listing.status <> 'published' then
+    raise exception 'listing is not available for booking';
   end if;
-  if v_offer.status <> 'open' then
-    raise exception 'night_offer % is not open for booking', new.night_offer_id;
-  end if;
-  if v_offer.hotel_id <> new.host_hotel_id then
-    raise exception 'host_hotel_id does not match night_offer';
+  if new.guests_count > v_listing.max_guests then
+    raise exception 'guests_count exceeds this listing''s max_guests';
   end if;
 
-  select * into v_hotel from hotels where id = v_offer.hotel_id;
+  select exists (
+    select 1 from bookings b
+    where b.listing_id = new.listing_id
+      and b.status in ('pending_payment', 'confirmed')
+      and daterange(b.check_in, b.check_out) && daterange(new.check_in, new.check_out)
+  ) into v_conflict;
+  if v_conflict then
+    raise exception 'selected dates are no longer available';
+  end if;
 
-  v_star_value := case v_hotel.stars when 3 then 1.0 when 4 then 1.5 when 5 then 2.0 else 1.0 end;
-  v_season_mult := case v_offer.season_tier when 'low' then 0.8 when 'high' then 1.4 else 1.0 end;
+  select exists (
+    select 1 from blocked_dates d
+    where d.listing_id = new.listing_id
+      and d.date >= new.check_in and d.date < new.check_out
+  ) into v_conflict;
+  if v_conflict then
+    raise exception 'selected dates are blocked by the host';
+  end if;
 
-  new.stars_at_booking := v_hotel.stars;
-  new.season_tier_at_booking := v_offer.season_tier;
-  new.nights := v_offer.nights;
-  new.credits_cost := round(v_star_value * v_season_mult * v_offer.nights, 2);
-
-  select coalesce(sum(amount), 0) into v_balance_before
-  from credit_ledger where hotel_id = new.requesting_hotel_id;
-
-  new.hold_status := case
-    when (v_balance_before - new.credits_cost) < 0 then 'pending'
-    else 'none'
-  end;
-
-  update night_offers set status = 'booked' where id = new.night_offer_id;
+  new.price_per_night_snapshot := v_listing.price_per_night;
+  new.cleaning_fee_snapshot := v_listing.cleaning_fee;
+  new.total_amount := round(v_listing.price_per_night * (new.check_out - new.check_in) + v_listing.cleaning_fee, 2);
+  new.status := 'pending_payment';
   return new;
 end;
 $$;
 
-create table credit_ledger (
-  id uuid primary key default gen_random_uuid(),
-  hotel_id uuid not null references hotels (id) on delete cascade,
-  booking_id uuid references bookings (id),
-  amount numeric(8, 2) not null,
-  reason text not null check (reason in ('booking_spent', 'stay_redeemed', 'admin_adjustment')),
-  created_at timestamptz not null default now()
-);
-
-create trigger trg_claim_night_offer_and_price
+create trigger trg_price_and_validate_booking
   before insert on bookings
-  for each row execute function claim_night_offer_and_price();
+  for each row execute function price_and_validate_booking();
 
 alter table bookings enable row level security;
 
 create policy "bookings_select" on bookings for select
   using (
-    requesting_hotel_id in (select id from hotels where owner_id = auth.uid())
-    or host_hotel_id in (select id from hotels where owner_id = auth.uid())
-    or is_admin()
+    guest_id = auth.uid()
+    or listing_id in (select id from listings where host_id = auth.uid())
   );
 
-create policy "bookings_insert" on bookings for insert
-  with check (
-    requesting_hotel_id in (
-      select id from hotels where owner_id = auth.uid() and verification_status = 'verified'
-    )
-  );
+create policy "bookings_insert_own" on bookings for insert
+  with check (guest_id = auth.uid());
 
--- host confirms/cancels; admin can also intervene (e.g. dispute resolution)
-create policy "bookings_update_host_or_admin" on bookings for update
-  using (host_hotel_id in (select id from hotels where owner_id = auth.uid()) or is_admin());
+-- No update policy for regular users: status only moves via the payments
+-- webhook, which uses the service-role key and bypasses RLS entirely.
 
 -- ============================================================
--- credit_ledger: append-only ledger, balance = sum(amount) per hotel.
+-- payments: one YooKassa payment per booking attempt.
 -- ============================================================
-alter table credit_ledger enable row level security;
-
-create policy "credit_ledger_select" on credit_ledger for select
-  using (hotel_id in (select id from hotels where owner_id = auth.uid()) or is_admin());
-
--- An owner may only self-insert the exact negative spend entry that
--- matches a booking they made - prevents inflating your own balance.
-create policy "credit_ledger_insert_own_spend" on credit_ledger for insert
-  with check (
-    reason = 'booking_spent'
-    and amount < 0
-    and hotel_id in (select id from hotels where owner_id = auth.uid())
-    and exists (
-      select 1 from bookings b
-      where b.id = credit_ledger.booking_id
-        and b.requesting_hotel_id = credit_ledger.hotel_id
-        and b.credits_cost = -credit_ledger.amount
-    )
-  );
-
-create policy "credit_ledger_insert_admin" on credit_ledger for insert
-  with check (is_admin());
-
-create view credit_balances with (security_invoker = true) as
-select hotel_id, coalesce(sum(amount), 0)::numeric(8, 2) as balance
-from credit_ledger
-group by hotel_id;
-
--- ============================================================
--- settle_booking: called at checkout. Credits the host (unless the
--- stay was a no-show) and decides whether the requesting hotel's HOLD
--- gets released or captured, based on their balance at that moment.
--- ============================================================
-create function settle_booking(p_booking_id uuid, p_credit_host boolean default true)
-returns void
-language plpgsql security definer as $$
-declare
-  v_booking bookings%rowtype;
-  v_balance numeric;
-begin
-  if not is_admin() then
-    raise exception 'only admin can settle bookings';
-  end if;
-
-  select * into v_booking from bookings where id = p_booking_id for update;
-  if v_booking.id is null then
-    raise exception 'booking not found';
-  end if;
-  if v_booking.status = 'completed' then
-    raise exception 'booking already completed';
-  end if;
-
-  if p_credit_host then
-    insert into credit_ledger (hotel_id, booking_id, amount, reason)
-    values (v_booking.host_hotel_id, v_booking.id, v_booking.credits_cost, 'stay_redeemed');
-  end if;
-
-  select coalesce(sum(amount), 0) into v_balance
-  from credit_ledger where hotel_id = v_booking.requesting_hotel_id;
-
-  update bookings
-  set status = 'completed',
-      hold_status = case when v_balance < 0 then 'captured' else 'released' end
-  where id = p_booking_id;
-end;
-$$;
-
--- ============================================================
--- Direct barter matching: separate from the credit exchange above.
--- A hotel posts what they're looking for, other hotels raise their
--- hand, and the two sides negotiate directly in a private thread -
--- Hotel Trust doesn't price or arbitrate these, just makes the intro.
--- ============================================================
-create table swap_requests (
+create table payments (
   id uuid primary key default gen_random_uuid(),
-  hotel_id uuid not null references hotels (id) on delete cascade,
-  wanted_location text not null,
-  notes text,
-  status text not null default 'open' check (status in ('open', 'closed')),
+  booking_id uuid not null references bookings (id) on delete cascade,
+  provider text not null default 'yookassa',
+  provider_payment_id text,
+  amount numeric(10, 2) not null,
+  status text not null default 'pending'
+    check (status in ('pending', 'succeeded', 'canceled', 'refunded')),
+  confirmation_url text,
+  raw_payload jsonb,
   created_at timestamptz not null default now()
 );
 
-alter table swap_requests enable row level security;
+create index payments_booking_idx on payments (booking_id);
 
-create policy "swap_requests_select" on swap_requests for select
+alter table payments enable row level security;
+
+create policy "payments_select" on payments for select
   using (
-    (status = 'open' and exists (
-      select 1 from hotels h
-      where h.id = swap_requests.hotel_id and h.verification_status = 'verified'
-    ))
-    or hotel_id in (select id from hotels where owner_id = auth.uid())
-    or is_admin()
-  );
-
-create policy "swap_requests_insert_own" on swap_requests for insert
-  with check (
-    hotel_id in (
-      select id from hotels where owner_id = auth.uid() and verification_status = 'verified'
+    booking_id in (
+      select id from bookings
+      where guest_id = auth.uid()
+        or listing_id in (select id from listings where host_id = auth.uid())
     )
   );
 
-create policy "swap_requests_update_own" on swap_requests for update
-  using (hotel_id in (select id from hotels where owner_id = auth.uid()) or is_admin());
-
--- "Raising a hand" on someone else's request.
-create table swap_interests (
-  id uuid primary key default gen_random_uuid(),
-  request_id uuid not null references swap_requests (id) on delete cascade,
-  interested_hotel_id uuid not null references hotels (id),
-  created_at timestamptz not null default now(),
-  unique (request_id, interested_hotel_id)
-);
-
-alter table swap_interests enable row level security;
-
--- visible to whoever posted the request and whoever raised their hand
-create policy "swap_interests_select" on swap_interests for select
-  using (
-    interested_hotel_id in (select id from hotels where owner_id = auth.uid())
-    or request_id in (select id from swap_requests where hotel_id in (
-      select id from hotels where owner_id = auth.uid()
-    ))
-    or is_admin()
-  );
-
-create policy "swap_interests_insert_own" on swap_interests for insert
+-- Created by the authenticated guest via /api/payments/create, only for
+-- their own booking while it's still awaiting payment.
+create policy "payments_insert_own" on payments for insert
   with check (
-    interested_hotel_id in (
-      select id from hotels where owner_id = auth.uid() and verification_status = 'verified'
-    )
-    and request_id in (select id from swap_requests where status = 'open')
+    booking_id in (select id from bookings where guest_id = auth.uid() and status = 'pending_payment')
   );
 
--- Private 1:1 thread, scoped to a specific request + the two hotels
--- involved. A hotel can only message on a request if it's either the
--- request owner or someone who actually raised their hand on it -
--- prevents random hotels DMing each other outside a matched context.
-create table swap_messages (
-  id uuid primary key default gen_random_uuid(),
-  request_id uuid not null references swap_requests (id) on delete cascade,
-  sender_hotel_id uuid not null references hotels (id),
-  recipient_hotel_id uuid not null references hotels (id),
-  check (sender_hotel_id <> recipient_hotel_id),
-  body text not null,
-  created_at timestamptz not null default now()
-);
+-- No update policy for regular users: the webhook (service-role) is the
+-- only writer of status changes, since it re-verifies against the
+-- YooKassa API rather than trusting anything client-submitted.
 
-alter table swap_messages enable row level security;
+-- ============================================================
+-- Storage: listing photos, uploaded by the host to their own uid-prefixed
+-- folder, publicly readable (needed for search/listing pages).
+-- ============================================================
+insert into storage.buckets (id, name, public)
+values ('listing-photos', 'listing-photos', true)
+on conflict (id) do nothing;
 
-create policy "swap_messages_select" on swap_messages for select
-  using (
-    sender_hotel_id in (select id from hotels where owner_id = auth.uid())
-    or recipient_hotel_id in (select id from hotels where owner_id = auth.uid())
-    or is_admin()
-  );
+create policy "listing_photos_public_read" on storage.objects for select
+  using (bucket_id = 'listing-photos');
 
-create policy "swap_messages_insert" on swap_messages for insert
-  with check (
-    sender_hotel_id in (select id from hotels where owner_id = auth.uid())
-    and exists (
-      select 1 from swap_requests r
-      where r.id = swap_messages.request_id
-        and (
-          (r.hotel_id = swap_messages.sender_hotel_id and exists (
-            select 1 from swap_interests si
-            where si.request_id = r.id and si.interested_hotel_id = swap_messages.recipient_hotel_id
-          ))
-          or
-          (r.hotel_id = swap_messages.recipient_hotel_id and exists (
-            select 1 from swap_interests si
-            where si.request_id = r.id and si.interested_hotel_id = swap_messages.sender_hotel_id
-          ))
-        )
-    )
-  );
+create policy "listing_photos_owner_write" on storage.objects for insert
+  with check (bucket_id = 'listing-photos' and (storage.foldername(name))[1] = auth.uid()::text);
+
+create policy "listing_photos_owner_delete" on storage.objects for delete
+  using (bucket_id = 'listing-photos' and (storage.foldername(name))[1] = auth.uid()::text);

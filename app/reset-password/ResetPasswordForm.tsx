@@ -27,14 +27,14 @@ export default function ResetPasswordForm() {
       return;
     }
 
-    router.push("/owner");
+    router.push("/account");
     router.refresh();
   }
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <div>
-        <label className="block text-sm font-medium mb-1">New password</label>
+        <label className="block text-sm font-medium mb-1">Новый пароль</label>
         <input
           required
           type="password"
@@ -50,9 +50,9 @@ export default function ResetPasswordForm() {
       <button
         type="submit"
         disabled={loading}
-        className="w-full rounded-md bg-brand-green text-brand-gold px-4 py-2 disabled:opacity-50"
+        className="w-full rounded-md bg-brand text-white px-4 py-2 disabled:opacity-50"
       >
-        {loading ? "Saving..." : "Set new password"}
+        {loading ? "Сохраняем..." : "Сохранить пароль"}
       </button>
     </form>
   );

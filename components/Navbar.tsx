@@ -1,7 +1,13 @@
 import Link from "next/link";
 import Logo from "./Logo";
+import { createClient } from "@/lib/supabase/server";
 
-export default function Navbar() {
+export default async function Navbar() {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
   return (
     <header className="border-b border-neutral-200 bg-white">
       <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
@@ -9,20 +15,22 @@ export default function Navbar() {
           <Logo />
         </Link>
         <nav className="flex items-center gap-6 text-sm">
-          <Link href="/marketplace" className="text-brand-green hover:text-brand-gold">
-            Marketplace
+          <Link href="/search" className="text-neutral-700 hover:text-brand">
+            Жильё
           </Link>
-          <Link href="/exchange" className="text-brand-green hover:text-brand-gold">
-            Direct Exchange
+          <Link href="/host" className="text-neutral-700 hover:text-brand">
+            Сдать жильё
           </Link>
-          <Link href="/owner" className="text-brand-green hover:text-brand-gold">
-            Owner Dashboard
-          </Link>
+          {user && (
+            <Link href="/account/bookings" className="text-neutral-700 hover:text-brand">
+              Мои поездки
+            </Link>
+          )}
           <Link
-            href="/login"
-            className="rounded-md bg-brand-green text-brand-gold px-4 py-2 hover:bg-brand-green-dark"
+            href={user ? "/account" : "/login"}
+            className="rounded-md bg-brand text-white px-4 py-2 hover:bg-brand-dark"
           >
-            Sign in
+            {user ? "Профиль" : "Войти"}
           </Link>
         </nav>
       </div>
