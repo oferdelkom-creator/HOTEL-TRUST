@@ -1,10 +1,11 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import type { Hotel, NightOffer, Profile } from "@/lib/types";
-import { estimateCreditsCost, SEASON_TIER_LABELS } from "@/lib/credits";
+import { estimateCreditsCost } from "@/lib/credits";
 import { getVerifiedHotelCount } from "@/lib/platformStats";
 import { LAUNCH_THRESHOLD } from "@/lib/platformConfig";
 import LockedUntilLaunch from "@/components/LockedUntilLaunch";
+import HotelOfferCard from "@/components/HotelOfferCard";
 
 type OfferWithHotel = NightOffer & { hotel: Hotel };
 
@@ -47,7 +48,10 @@ export default async function MarketplacePage() {
   return (
     <div className="max-w-4xl mx-auto px-4 py-12">
       <h1 className="text-2xl font-semibold mb-1">Marketplace</h1>
-      <p className="text-neutral-500 mb-8">Available nights at other verified member hotels.</p>
+      <p className="text-neutral-500 mb-8">
+        Available nights at other verified member hotels. Every price is in credits, calculated from
+        the host hotel&apos;s star rating, the season and the number of nights.
+      </p>
 
       <div className="grid gap-4">
         {verifiedOffers.length ? (
@@ -55,36 +59,21 @@ export default async function MarketplacePage() {
             const cost = estimateCreditsCost(offer.hotel.stars, offer.season_tier, offer.nights);
             const isOwn = user && offer.hotel.owner_id === user.id;
             return (
-              <div
+              <HotelOfferCard
                 key={offer.id}
-                className="flex items-center justify-between rounded-lg border border-neutral-200 bg-white px-6 py-5"
-              >
-                <div>
-                  <p className="font-medium">
-                    {offer.hotel.name} - {offer.hotel.city}, {offer.hotel.country}
-                  </p>
-                  <p className="text-sm text-neutral-500">
-                    {offer.hotel.stars}★ - {offer.start_date} → {offer.end_date} ({offer.nights} nights) -{" "}
-                    {SEASON_TIER_LABELS[offer.season_tier]}
-                  </p>
-                  {offer.hotel.perks && (
-                    <p className="text-sm text-brand-green mt-1">{offer.hotel.perks}</p>
-                  )}
-                  {offer.hotel.accessibility && (
-                    <p className="text-sm text-neutral-500 mt-1">♿ {offer.hotel.accessibility}</p>
-                  )}
-                </div>
-                <div className="text-right">
-                  <p className="font-semibold">{cost.toFixed(2)} credits</p>
-                  {isOwn ? (
+                hotel={offer.hotel}
+                offer={offer}
+                cost={cost}
+                action={
+                  isOwn ? (
                     <span className="text-xs text-neutral-400">Your own hotel</span>
                   ) : (
                     <Link href={`/book/${offer.id}`} className="text-sm underline">
                       Book with credits
                     </Link>
-                  )}
-                </div>
-              </div>
+                  )
+                }
+              />
             );
           })
         ) : (

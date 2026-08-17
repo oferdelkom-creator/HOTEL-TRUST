@@ -15,7 +15,7 @@ export default function LockedUntilLaunch({
         get verified, and list nights in the meantime - everything will be ready the moment it
         opens.
       </p>
-      <LaunchProgress verifiedCount={verifiedCount} />
+      <LaunchProgress verifiedCount={verifiedCount} showBenefits={false} />
       <Link href="/owner" className="inline-block mt-6 rounded-md bg-brand-green text-brand-gold px-5 py-2.5">
         Go to your dashboard
       </Link>
