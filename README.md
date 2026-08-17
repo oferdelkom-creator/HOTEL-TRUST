@@ -46,7 +46,10 @@ A credit-based room exchange network for **verified hotel owners only**. Built w
   (append-only; an owner can only self-insert the exact negative spend entry matching a booking
   they made, so no one can inflate their own balance), `credit_balances` (view: `sum(amount)` per
   hotel), `settle_booking()` RPC (admin-only checkout settlement).
-- Public pages: `/` (landing), `/marketplace` (browse open nights at verified hotels).
+- Public pages: `/` (landing), `/marketplace` (browse open nights at verified hotels), `/about`,
+  `/faq`, `/contact`, and the policy set - `/terms`, `/privacy`, `/cookies`, `/cancellations`,
+  `/accessibility`. The three policy pages share one "Last updated" date from `lib/legal.ts`; bump
+  it whenever their wording changes.
 - Auth: `/login` (combined signup/signin, creates a `hotel_owner` profile), session via
   `@supabase/ssr`, route protection in `proxy.ts` for `/owner/*`, `/admin/*`, `/book/*`.
 - Owner flow: `/owner` (dashboard: balance, verification status), `/owner/hotel/new` + `/edit`

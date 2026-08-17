@@ -1,10 +1,11 @@
 import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import type { Hotel, NightOffer, Profile } from "@/lib/types";
-import { estimateCreditsCost, SEASON_TIER_LABELS } from "@/lib/credits";
+import { estimateCreditsCost } from "@/lib/credits";
 import { getVerifiedHotelCount } from "@/lib/platformStats";
 import { LAUNCH_THRESHOLD } from "@/lib/platformConfig";
 import LockedUntilLaunch from "@/components/LockedUntilLaunch";
+import HotelOfferCard from "@/components/HotelOfferCard";
 import BookingForm from "./BookingForm";
 
 type OfferWithHotel = NightOffer & { hotel: Hotel };
@@ -67,24 +68,15 @@ export default async function BookNightPage({
 
   return (
     <div className="max-w-xl mx-auto px-4 py-12">
-      <h1 className="text-2xl font-semibold mb-1">
-        {offer.hotel.name} - {offer.hotel.city}, {offer.hotel.country}
-      </h1>
-      <p className="text-neutral-500 mb-1">
-        {offer.hotel.stars}★ - {offer.start_date} → {offer.end_date} ({offer.nights} nights) -{" "}
-        {SEASON_TIER_LABELS[offer.season_tier]}
+      <h1 className="text-2xl font-semibold mb-1">Booking details</h1>
+      <p className="text-neutral-500 text-sm mb-6">
+        Check the stay below before confirming. The credit cost is recalculated by Hotel Trust when
+        the booking is made.
       </p>
-      {offer.hotel.business_name && (
-        <p className="text-neutral-500 text-sm mb-1">{offer.hotel.business_name}</p>
-      )}
-      {offer.hotel.perks && <p className="text-brand-green mt-2">{offer.hotel.perks}</p>}
-      {offer.hotel.accessibility && (
-        <p className="text-neutral-600 text-sm mt-1">♿ {offer.hotel.accessibility}</p>
-      )}
-      {offer.hotel.contact_info && (
-        <p className="text-neutral-600 text-sm mt-1">📞 {offer.hotel.contact_info}</p>
-      )}
-      <div className="mb-6" />
+
+      <div className="mb-6">
+        <HotelOfferCard hotel={offer.hotel} offer={offer} cost={estimatedCost} showContact />
+      </div>
 
       <div className="rounded-lg border border-neutral-200 bg-white p-6 mb-6">
         <div className="flex justify-between text-sm mb-1">

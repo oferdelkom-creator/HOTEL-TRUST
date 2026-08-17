@@ -4,6 +4,47 @@ import { createClient } from "@/lib/supabase/server";
 import { getVerifiedHotelCount } from "@/lib/platformStats";
 import LaunchProgress from "@/components/LaunchProgress";
 
+const REASONS_TO_JOIN = [
+  {
+    title: "Turn vacant rooms into travel value",
+    body: "Nights that would have gone empty become credits you can spend at other member hotels.",
+  },
+  {
+    title: "Reward staff and family",
+    body: "A stay booked with your credits can go to you, a family member, or a member of your team.",
+  },
+  {
+    title: "Verified hotel-owner network",
+    body: "Every member submits proof of ownership and is approved manually. No self-declared members.",
+  },
+  {
+    title: "Direct exchange requests and private chat",
+    body: "Post what you're looking for, see which owners are interested, and agree the details privately.",
+  },
+  {
+    title: "Member-only travel opportunities",
+    body: "Availability inside the network is offered between owners - it isn't published on public booking channels.",
+  },
+];
+
+const HOW_IT_WORKS = [
+  {
+    step: "1",
+    title: "Verify your hotel",
+    body: "Submit your OTA listing or an ownership document. An admin reviews it manually before your hotel is activated.",
+  },
+  {
+    step: "2",
+    title: "Offer vacant nights and earn credits",
+    body: "Open the dates you can spare to the network. Every night another member stays adds credits to your balance.",
+  },
+  {
+    step: "3",
+    title: "Travel yourself, send family, or reward staff",
+    body: "Spend your credits at any other member hotel and choose who the stay is for.",
+  },
+];
+
 export default async function HomePage() {
   const supabase = await createClient();
   const verifiedCount = await getVerifiedHotelCount(supabase);
@@ -20,7 +61,7 @@ export default async function HomePage() {
         />
         <div className="absolute inset-0 bg-brand-green-dark/70" />
         <div className="relative max-w-3xl mx-auto px-4 py-28 text-center">
-          <p className="text-sm font-medium text-brand-gold mb-3">Currently in trial</p>
+          <p className="text-sm font-medium text-brand-gold mb-3">Founding Member Access</p>
           <h1 className="text-4xl font-semibold tracking-tight mb-4 text-white">
             A room exchange network for verified hotel owners
           </h1>
@@ -43,26 +84,54 @@ export default async function HomePage() {
         <LaunchProgress verifiedCount={verifiedCount} />
       </section>
 
-      <section className="max-w-4xl mx-auto px-4 py-20 grid grid-cols-1 md:grid-cols-3 gap-8">
-        <div>
-          <h2 className="font-medium mb-2 text-brand-green">1. Get verified</h2>
-          <p className="text-sm text-neutral-600">
-            Every member is a real, checked hotel owner. That&apos;s what keeps the exchange safe.
-          </p>
+      <section className="max-w-5xl mx-auto px-4 py-20">
+        <h2 className="text-2xl font-semibold mb-2 text-brand-green">Why hotel owners join</h2>
+        <p className="text-neutral-600 mb-8">
+          Hotel Trust is built around one asset every hotel already has: nights that would otherwise
+          stay empty.
+        </p>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {REASONS_TO_JOIN.map((reason) => (
+            <div
+              key={reason.title}
+              className="rounded-lg border border-neutral-200 bg-white px-5 py-5"
+            >
+              <h3 className="font-medium mb-2 text-brand-green">{reason.title}</h3>
+              <p className="text-sm text-neutral-600">{reason.body}</p>
+            </div>
+          ))}
         </div>
-        <div>
-          <h2 className="font-medium mb-2 text-brand-green">2. Offer & earn credits</h2>
-          <p className="text-sm text-neutral-600">
-            Open your vacant nights to the network. Credits are priced by star rating and season -
-            not a rigid 1:1 swap.
-          </p>
-        </div>
-        <div>
-          <h2 className="font-medium mb-2 text-brand-green">3. Spend them anywhere</h2>
-          <p className="text-sm text-neutral-600">
-            Use your credits at any other member hotel, for yourself, a family member, or an
-            employee.
-          </p>
+      </section>
+
+      <section className="bg-white border-y border-neutral-200">
+        <div className="max-w-5xl mx-auto px-4 py-20">
+          <h2 className="text-2xl font-semibold mb-8 text-brand-green">How it works</h2>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            {HOW_IT_WORKS.map((item) => (
+              <div key={item.step}>
+                <span className="inline-flex items-center justify-center h-9 w-9 rounded-full bg-brand-green text-brand-gold font-medium mb-3">
+                  {item.step}
+                </span>
+                <h3 className="font-medium mb-2 text-brand-green">{item.title}</h3>
+                <p className="text-sm text-neutral-600">{item.body}</p>
+              </div>
+            ))}
+          </div>
+
+          <div className="mt-10 rounded-lg border border-neutral-200 bg-neutral-50 px-5 py-5">
+            <h3 className="font-medium mb-2 text-brand-green">How credits are valued</h3>
+            <p className="text-sm text-neutral-600">
+              Credits are not a direct 1:1 room swap. The value of a stay is calculated from the
+              host hotel&apos;s star rating, the season of the stay, and the number of nights - so a
+              night in high season at a 5-star property is worth more than a low-season night at a
+              3-star one. The season is set by Hotel Trust, not by the host, so no member can inflate
+              their own rate.{" "}
+              <Link href="/faq" className="text-brand-gold underline">
+                See the FAQ
+              </Link>
+              .
+            </p>
+          </div>
         </div>
       </section>
 
@@ -106,6 +175,10 @@ export default async function HomePage() {
           Read the full rules in our{" "}
           <Link href="/terms" className="text-brand-gold underline">
             Terms
+          </Link>{" "}
+          or the short answers in our{" "}
+          <Link href="/faq" className="text-brand-gold underline">
+            FAQ
           </Link>
           .
         </p>

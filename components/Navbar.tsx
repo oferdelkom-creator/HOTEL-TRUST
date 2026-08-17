@@ -18,6 +18,9 @@ export default function Navbar() {
           <Link href="/owner" className="text-brand-green hover:text-brand-gold">
             Owner Dashboard
           </Link>
+          <Link href="/faq" className="text-brand-green hover:text-brand-gold">
+            FAQ
+          </Link>
           <Link
             href="/login"
             className="rounded-md bg-brand-green text-brand-gold px-4 py-2 hover:bg-brand-green-dark"
