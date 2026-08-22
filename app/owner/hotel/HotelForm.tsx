@@ -31,6 +31,10 @@ export default function HotelForm({ hotel }: { hotel?: Hotel }) {
       } = await supabase.auth.getUser();
       if (!user) throw new Error("Not signed in");
 
+      // Empty string would defeat the `?? "#"` / truthiness fallbacks the
+      // admin page and notification email use to detect "no proof yet".
+      const proofUrlOrNull = proofUrl.trim() || null;
+
       if (hotel) {
         const { error: updateError } = await supabase
           .from("hotels")
@@ -39,7 +43,7 @@ export default function HotelForm({ hotel }: { hotel?: Hotel }) {
             country,
             city,
             stars,
-            verification_proof_url: proofUrl,
+            verification_proof_url: proofUrlOrNull,
             business_name: businessName,
             perks,
             accessibility,
@@ -56,7 +60,7 @@ export default function HotelForm({ hotel }: { hotel?: Hotel }) {
             country,
             city,
             stars,
-            verification_proof_url: proofUrl,
+            verification_proof_url: proofUrlOrNull,
             business_name: businessName,
             perks,
             accessibility,
@@ -144,7 +148,6 @@ export default function HotelForm({ hotel }: { hotel?: Hotel }) {
       <div>
         <label className="block text-sm font-medium mb-1">Ownership proof link</label>
         <input
-          required
           type="url"
           placeholder="Link to your Booking.com / Google Business listing, or a hosted license document"
           value={proofUrl}
@@ -152,7 +155,8 @@ export default function HotelForm({ hotel }: { hotel?: Hotel }) {
           className="w-full rounded-md border border-neutral-300 px-3 py-2"
         />
         <p className="text-xs text-neutral-500 mt-1">
-          An admin reviews this manually before your hotel is verified.
+          Optional for now, but required before an admin can verify you - add it here or later
+          from &quot;Hotel profile&quot; on your dashboard.
         </p>
       </div>
       <div>
