@@ -1,0 +1,23 @@
+{
+  "name": "@pandora/deadline-gate",
+  "version": "0.1.0",
+  "description": "שער המועדים של תיבת פנדורה — מנוע כללים דטרמיניסטי למועדים וכשירות",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "gen:vacations": "node scripts/generate-vacations.mjs > src/vacations/table.ts"
+  },
+  "devDependencies": {
+    "@hebcal/core": "^6.9.2",
+    "@types/node": "^26.3.0",
+    "tsx": "^4.23.12",
+    "typescript": "^7.0.2",
+    "vitest": "^4.1.11"
+  },
+  "type": "module",
+  "types": "dist/index.d.ts",
+  "private": true
+}
