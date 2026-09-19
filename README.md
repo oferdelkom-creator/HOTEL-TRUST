@@ -70,6 +70,20 @@ A credit-based room exchange network for **verified hotel owners only**. Built w
 Unsplash photo (Thailand longtail boat, Unsplash License - free for commercial use, no attribution
 required): https://unsplash.com/photos/photo-1704314315344-cd10b9779ce6
 
+## Telegram bingo bot
+
+A separate, self-contained side product that ships inside this app: a 75-ball
+bingo bot (solo + group rounds) where winners collect Telegram Stars and redeem
+them for real gifts. It shares the Supabase project and the deployment but
+touches none of the hotel exchange tables or routes - `bingo_*` tables,
+`lib/bingo/*`, `app/api/telegram/*`.
+
+Entry is free by design: charging for cards while paying out prizes of monetary
+value is gambling, which Telegram's Stars terms bar outright. Setup, the Stars
+payout mechanics (a bot **cannot** credit Stars to a user - prizes are gifts
+bought from the bot's own balance), and the cost model are in
+[`docs/telegram-bingo.md`](docs/telegram-bingo.md).
+
 ## Known gaps (deliberate MVP cuts, not forgotten)
 
 - **No real payment gateway.** `hold_status: 'captured'` just marks that a real charge is owed -
