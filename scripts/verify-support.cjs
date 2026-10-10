@@ -6,6 +6,6 @@ assert.equal(previewReply({category:'checkin',language:'en'},[answer]).body,answ
 assert.equal(previewReply({category:'checkin',language:'en'},[{...answer,approved:false}]).handoff,true);
 assert.equal(previewReply({category:'checkin',language:'en'},[answer,{...answer,id:'second'}]).handoff,true);
 for(const language of guestLanguages){assert.equal(previewReply({category:'checkin',language},[]).body,handoff[language]);assert.equal(previewReply({category:'urgent',language},[{...answer,category:'urgent',language}]).handoff,true);assert.equal(previewReply({category:'billing',language},[{...answer,category:'billing',language}]).handoff,true);}
-for(const path of ['https://example.com','//example.com','/\\example.com',null])assert.equal(localRedirect(path),'/owner');
+for(const path of ['https://example.com','/\n/example.com','//example.com','/\\example.com',null])assert.equal(localRedirect(path),'/owner');
 assert.equal(localRedirect('/owner'),'/owner');
 console.log('PASS: approved information, ambiguity, six-language handoffs, urgent/billing review and safe redirects');

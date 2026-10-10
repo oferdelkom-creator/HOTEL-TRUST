@@ -14,4 +14,4 @@ export function previewReply(request:{category:SupportCategory;language:GuestLan
  if(['urgent','billing','maintenance','housekeeping'].includes(request.category)||matches.length!==1)return {body:handoff[request.language],source:null,handoff:true};
  return {body:matches[0].body,source:matches[0].title,handoff:false};
 }
-export function localRedirect(value:string|null){return value?.startsWith('/')&&!value.startsWith('//')&&!value.includes('\\')?value:'/owner';}
+export function localRedirect(value:string|null){return value?.startsWith('/')&&!value.startsWith('//')&&!/[\u0000-\u0020\\]/.test(value)?value:'/owner';}
