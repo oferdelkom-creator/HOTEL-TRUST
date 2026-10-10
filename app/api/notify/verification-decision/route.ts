@@ -37,7 +37,7 @@ export async function POST(request: Request) {
     subject: verified ? "You're verified on Hotel Trust" : "Update on your Hotel Trust application",
     html: renderEmail(
       verified
-        ? `<p>Hi ${owner.full_name},</p><p><strong>${hotel.name}</strong> is now verified on Hotel Trust. You can offer nights and browse the exchange at <a href="https://hoteltrust.org/owner">hoteltrust.org/owner</a>.</p>`
+        ? `<p>Hi ${owner.full_name},</p><p><strong>${hotel.name}</strong> is now verified on Hotel Trust. You can prepare your approved information and hotel support workspace at <a href="https://hoteltrust.org/owner">hoteltrust.org/owner</a>.</p>`
         : `<p>Hi ${owner.full_name},</p><p>We weren't able to verify <strong>${hotel.name}</strong> at this time${hotel.verification_note ? `: ${hotel.verification_note}` : "."}</p>`
     ),
   });

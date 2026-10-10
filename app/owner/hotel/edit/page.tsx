@@ -3,18 +3,17 @@ import { createClient } from "@/lib/supabase/server";
 import type { Hotel } from "@/lib/types";
 import HotelForm from "../HotelForm";
 
-export default async function EditHotelPage() {
+export default async function EditHotelPage({searchParams}:{searchParams:Promise<{hotel?:string}>}) {
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) redirect("/login?next=/owner/hotel/edit");
 
-  const { data: hotel } = await supabase
-    .from("hotels")
-    .select("*")
-    .eq("owner_id", user.id)
-    .maybeSingle<Hotel>();
+  const params=await searchParams;
+  let query=supabase.from("hotels").select("*").eq("owner_id",user.id);
+  if(params.hotel)query=query.eq("id",params.hotel);
+  const {data:hotel}=await query.limit(1).maybeSingle<Hotel>();
 
   if (!hotel) redirect("/owner/hotel/new");
 

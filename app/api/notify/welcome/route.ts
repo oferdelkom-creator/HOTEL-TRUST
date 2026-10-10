@@ -22,7 +22,7 @@ export async function POST(request: Request) {
     to: profile.email,
     subject: "Welcome to Hotel Trust",
     html: renderEmail(
-      `<p>Hi ${profile.full_name},</p><p>Welcome to Hotel Trust. Next step: <a href="https://hoteltrust.org/owner/hotel/new">add your hotel</a> and submit it for verification - that's what unlocks the exchange for you.</p>`
+      `<p>Hi ${profile.full_name},</p><p>Welcome to Hotel Trust. Next step: <a href="https://hoteltrust.org/owner/hotel/new">add your hotel</a> and submit it for verification - then prepare your approved hotel information and guest support workspace.</p>`
     ),
   });
 

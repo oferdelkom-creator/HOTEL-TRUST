@@ -26,6 +26,10 @@ export default function HotelForm({ hotel }: { hotel?: Hotel }) {
     const supabase = createClient();
 
     try {
+      if(!name.trim()||name.length>150||!country.trim()||country.length>100||!city.trim()||city.length>100)throw new Error('Please enter valid hotel details.');
+      const listing=new URL(proofUrl);
+      if(listing.protocol!=='https:'||listing.username||listing.password||proofUrl.length>2000)throw new Error('Use a public HTTPS business listing.');
+      if([businessName,perks,accessibility,contactInfo].some(v=>v.length>3000))throw new Error('Please shorten the hotel information.');
       const {
         data: { user },
       } = await supabase.auth.getUser();
@@ -130,7 +134,7 @@ export default function HotelForm({ hotel }: { hotel?: Hotel }) {
           <option value={4}>4 stars</option>
           <option value={5}>5 stars</option>
         </select>
-        <p className="text-xs text-neutral-500 mt-1">Below 3 stars isn&apos;t accepted onto the platform.</p>
+        <p className="text-xs text-neutral-500 mt-1">Choose the hotel’s current published rating.</p>
       </div>
       <div>
         <label className="block text-sm font-medium mb-1">Business / legal entity name</label>
@@ -146,7 +150,7 @@ export default function HotelForm({ hotel }: { hotel?: Hotel }) {
         <input
           required
           type="url"
-          placeholder="Link to your Booking.com / Google Business listing, or a hosted license document"
+          placeholder="Public Booking.com / Google Business hotel listing"
           value={proofUrl}
           onChange={(e) => setProofUrl(e.target.value)}
           className="w-full rounded-md border border-neutral-300 px-3 py-2"
@@ -165,8 +169,7 @@ export default function HotelForm({ hotel }: { hotel?: Hotel }) {
           className="w-full rounded-md border border-neutral-300 px-3 py-2"
         />
         <p className="text-xs text-neutral-500 mt-1">
-          Optional - only offer what you can actually deliver. Shown to other members browsing
-          your listing.
+          Optional. Describe only services your hotel can deliver.
         </p>
       </div>
       <div>
@@ -188,7 +191,7 @@ export default function HotelForm({ hotel }: { hotel?: Hotel }) {
           className="w-full rounded-md border border-neutral-300 px-3 py-2"
         />
         <p className="text-xs text-neutral-500 mt-1">
-          Shown to other members so they can reach you directly.
+          Business contact details for support coordination.
         </p>
       </div>
 

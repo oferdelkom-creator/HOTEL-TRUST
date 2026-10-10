@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import {localRedirect} from "@/lib/support";
 
 export default function LoginForm() {
   const router = useRouter();
@@ -24,7 +25,7 @@ export default function LoginForm() {
 
     try {
       if (mode === "forgot") {
-        const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
+        const { error: resetError } = await supabase.auth.resetPasswordForEmail(email.trim().toLowerCase(), {
           redirectTo: "https://hoteltrust.org/reset-password",
         });
         if (resetError) throw resetError;
@@ -40,7 +41,7 @@ export default function LoginForm() {
         // the session (a client-side insert would need auth.uid(), which
         // isn't set yet in that case).
         const { data, error: signUpError } = await supabase.auth.signUp({
-          email,
+          email: email.trim().toLowerCase(),
           password,
           options: { data: { full_name: fullName } },
         });
@@ -65,13 +66,13 @@ export default function LoginForm() {
         }
       } else {
         const { error: signInError } = await supabase.auth.signInWithPassword({
-          email,
+          email: email.trim().toLowerCase(),
           password,
         });
         if (signInError) throw signInError;
       }
 
-      const next = searchParams.get("next") || "/owner";
+      const next = localRedirect(searchParams.get("next"));
       router.push(next);
       router.refresh();
     } catch (err) {

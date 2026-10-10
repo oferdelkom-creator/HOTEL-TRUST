@@ -10,7 +10,7 @@ export function renderEmail(bodyHtml: string): string {
       ${bodyHtml}
     </div>
     <p style="text-align: center; color: #a3a3a3; font-size: 12px; margin-top: 16px;">
-      Hotel Trust - a verified-owner-only room exchange network.
+      Hotel Trust - guest support and operations for hotel teams.
     </p>
   </div>
   `;
