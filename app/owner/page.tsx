@@ -10,5 +10,5 @@ export default async function Owner(){
  const query=db.from('hotels').select('id,name,city,country,verification_status');
  const {data:hotels,error}=await (memberIds.length?query.or(`owner_id.eq.${user.id},id.in.(${memberIds.join(',')})`):query.eq('owner_id',user.id)).order('created_at');
  if(error)return <div className="ht-wrap ht-section" role="alert"><h1>The workspace could not be loaded</h1><p>Please refresh and try again.</p></div>;
- return <OperationsWorkspace hotels={hotels??[]} accountId={user.id}/>;
+ return <OperationsWorkspace hotels={hotels??[]} accountId={user.id} reportDate={new Date().toISOString().slice(0,10)}/>;
 }
