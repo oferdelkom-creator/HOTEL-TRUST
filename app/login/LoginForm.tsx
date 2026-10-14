@@ -47,14 +47,6 @@ export default function LoginForm() {
         });
         if (signUpError) throw signUpError;
 
-        if (data.user) {
-          await fetch("/api/notify/welcome", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ profileId: data.user.id }),
-          }).catch(() => {});
-        }
-
         if (!data.session) {
           // Email confirmation is required on this project - nothing more
           // to do client-side until they click the confirmation link.
@@ -72,6 +64,9 @@ export default function LoginForm() {
         if (signInError) throw signInError;
       }
 
+      // New accounts receive a welcome after verified sign-in. Old accounts
+      // are ignored by the server; registration confirmation is sent by Auth.
+      await fetch("/api/notify/welcome", { method: "POST", signal: AbortSignal.timeout(10000) }).catch(() => {});
       const next = localRedirect(searchParams.get("next"));
       router.push(next);
       router.refresh();
