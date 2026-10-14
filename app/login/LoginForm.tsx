@@ -8,7 +8,7 @@ import {localRedirect} from "@/lib/support";
 export default function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [mode, setMode] = useState<"signin" | "signup" | "forgot">("signin");
+  const [mode, setMode] = useState<"signin" | "signup" | "forgot">(searchParams.get("reset") === "1" ? "forgot" : "signin");
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -26,7 +26,7 @@ export default function LoginForm() {
     try {
       if (mode === "forgot") {
         const { error: resetError } = await supabase.auth.resetPasswordForEmail(email.trim().toLowerCase(), {
-          redirectTo: "https://hoteltrust.org/reset-password",
+          redirectTo: window.location.origin + "/reset-password",
         });
         if (resetError) throw resetError;
         setInfo("If that email has an account, a reset link has been sent - check your inbox.");

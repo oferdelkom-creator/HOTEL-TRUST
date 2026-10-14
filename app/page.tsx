@@ -1,2 +1,3 @@
 import HotelSupportLanding from '@/components/HotelSupportLanding';
-export default function Home(){return <HotelSupportLanding/>;}
+import RecoveryLanding from '@/components/RecoveryLanding';
+export default function Home(){return <><RecoveryLanding/><HotelSupportLanding/></>;}
