@@ -13,7 +13,7 @@ async function requireOwner() {
 async function sendTest() {
   'use server';
   await requireOwner();
-  if (!process.env.RESEND_API_KEY) redirect('?result=unconfigured');
+  if (!process.env.RESEND_API_KEY) redirect('/admin/email-test?result=unconfigured');
   const mail = acknowledgement('hoteltrust', { name: 'עופר', kind: 'account' });
   let accepted = false;
   try {
@@ -23,7 +23,7 @@ async function sendTest() {
     }, {idempotencyKey:'hoteltrust-welcome-owner-test/2026-10-14'});
     accepted = !error && Boolean(data?.id);
   } catch {}
-  redirect(accepted ? '?result=accepted' : '?result=failed');
+  redirect(accepted ? '/admin/email-test?result=accepted' : '/admin/email-test?result=failed');
 }
 export default async function EmailTest({searchParams}: {searchParams: Promise<{result?:string}>}) {
   await requireOwner();
