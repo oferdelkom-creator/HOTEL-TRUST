@@ -18,12 +18,8 @@ export default function ResetPasswordForm() {
       const fragment = new URLSearchParams(window.location.hash.slice(1));
       if (params.has("error") || fragment.has("error")) return "This reset link is invalid or has expired. Request a new link and open only the newest email.";
       const supabase = createClient();
-      const code = params.get("code");
-      if (code) {
-        const { error } = await supabase.auth.exchangeCodeForSession(code);
-        window.history.replaceState(null, "", "/reset-password");
-        if (error) return "Could not verify this link. Request a new link in this browser.";
-      }
+      // createBrowserClient detects and exchanges PKCE codes during initialization.
+      // getUser waits for initialization; exchanging again would consume a one-use code twice.
       const { data: { user }, error } = await supabase.auth.getUser();
       if (error || !user) return "No valid recovery session. Request a new reset link in this browser.";
       window.history.replaceState(null, "", "/reset-password");
