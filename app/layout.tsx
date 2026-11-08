@@ -1,3 +1,4 @@
+import VercelPageviews from '@/components/VercelPageviews';
 import type { Metadata } from "next";
 import "./globals.css";
 import Navbar from "@/components/Navbar";
@@ -19,6 +20,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <a href="#main-content" className="ht-skip">Skip to content</a>
         <main className="flex-1" id="main-content">{children}</main>
         <Footer />
+        <VercelPageviews />
       </body>
     </html>
   );
